@@ -44,6 +44,9 @@ static uint8_t eng_mem_owner[NPART];       /* engine index + 1 whose state is in
 #if FELUCCA_SLICE
 #include "eng_slice.c"
 #endif
+#if FELUCCA_CRITTER
+#include "eng_critter.c"         /* AMBIENT: Burger Studio's New Ambient creatures (MIT) */
+#endif
 #if FELUCCA_ADPCM
 #include "eng_adpcm.c"           /* ADPCM: BRR waves and an FIR echo, its DSP ported from snes_spc (adpcm_dsp.c, LGPL-2.1+) */
 #endif
@@ -72,6 +75,8 @@ static const engine_t *const ENGINES[NENGINES] = {
 #endif
 #if FELUCCA_ADPCM
     &ENG_ADPCM,                  /* 14 (ENGI_ADPCM; FELUCCA_ADPCM=0 builds without it) */
+#elif FELUCCA_CRITTER
+    &ENG_CRITTER,                /* 14 (ENGI_CRITTER, Burger Studio): in ADPCM's place when that is not built */
 #endif
 };
 
@@ -133,8 +138,8 @@ static const uint8_t ENGINE_ORDER[NENG_SHOWN] = {
     13,                          /* SLICE */
 #endif
     10,                          /* DRUM */
-#if FELUCCA_ADPCM
-    14,                          /* ADPCM (1.8): last, so the EDIT layer's white keys keep the 13 above (ui_layer.c LY_ENG_KEYS) */
+#if FELUCCA_E14
+    14,                          /* ADPCM / AMBIENT (1.8): last, so the EDIT layer's white keys keep the 13 above (ui_layer.c LY_ENG_KEYS) */
 #endif
 };
 

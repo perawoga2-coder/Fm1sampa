@@ -35,7 +35,15 @@
 #if FELUCCA_ADPCM && !FELUCCA_SLICE
 #error "FELUCCA_ADPCM needs FELUCCA_SLICE (ADPCM is engine 14, after SLICE)"
 #endif
-#define NENGINES (13 + FELUCCA_SLICE + FELUCCA_ADPCM)   /* SLICE (13), then ADPCM (14): the other engines keep their
+#ifndef FELUCCA_CRITTER
+#define FELUCCA_CRITTER (!FELUCCA_ADPCM)   /* Burger Studio: the AMBIENT engine (eng_critter.c) as engine 14, when ADPCM is not built */
+#endif
+#if FELUCCA_CRITTER && (FELUCCA_ADPCM || !FELUCCA_SLICE)
+#error "FELUCCA_CRITTER is engine 14: it needs FELUCCA_SLICE and no FELUCCA_ADPCM"
+#endif
+#define FELUCCA_E14 (FELUCCA_ADPCM || FELUCCA_CRITTER)   /* engine 14 is built (ADPCM or AMBIENT) */
+#define ENGI_CRITTER 14u
+#define NENGINES (13 + FELUCCA_SLICE + FELUCCA_E14)   /* SLICE (13), then ADPCM (14): the other engines keep their
                                                          * numbers */
 #define ENGI_ADPCM 14u
 #define ENGI_DIGITAL 1u          /* reserved without FELUCCA_FM4: never selectable (eng_ok), its sounds load as FM6 */

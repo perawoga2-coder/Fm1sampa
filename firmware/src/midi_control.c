@@ -227,6 +227,8 @@ static const uint8_t MIDI_CC_ENG[NENGINES] = {
 #endif
 #if FELUCCA_ADPCM
     0x00,                                             /* ADPCM - (no filter) */
+#elif FELUCCA_CRITTER
+    0x40,                                             /* AMBIENT BRIT */
 #endif
 };
 /* a CC sets parameter id of track t as a knob would: 0..127 over its range */

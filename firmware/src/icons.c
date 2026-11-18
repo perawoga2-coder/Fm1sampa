@@ -255,6 +255,7 @@ static uint32_t engine_icon(const char *name)
         {"NOISE", ICON_NOISE},
         {"FM6", ICON_MOD},                    /* (symbol_modular: six operators patched; a glyph of its own wanted) */
         {"ADPCM", ICON_SAMPLE},               /* (short sampled waves) */
+        {"AMBIENT", ICON_NOISE},              /* Burger Studio's creatures */
     };
     uint32_t i;
     for (i = 0; i < sizeof M / sizeof M[0]; i++)

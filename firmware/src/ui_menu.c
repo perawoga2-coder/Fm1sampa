@@ -52,6 +52,10 @@ static const menu_credit_t MENU_CREDITS[] = {
     {"Tony Gies / MIT", MC_TEXT},
     {"https://github.com/tgies/klattsch", MC_URL},
     {"", MC_TEXT},
+    {"BURGER STUDIO", MC_TITLE},
+    {"MakerHip: the AMBIENT engine and this edition / MIT and GPL-3.0", MC_TEXT},
+    {"https://github.com/perawoga2-coder/Fm1sampa", MC_URL},
+    {"", MC_TEXT},
 #if FELUCCA_ADPCM
     {"ADPCM DSP", MC_TITLE},
     {"Shay Green, ported by ugotworms / LGPL-2.1+", MC_TEXT},
@@ -122,8 +126,8 @@ static int32_t menu_document(int32_t y, int draw)
 {
     uint32_t i;
     if (draw) {
-        cv_text(6, y + 2, &AF_L, "FELUCCA", T_THEME);
-        cv_text(6, y + 38, &AF_S, "Multi-engine synthesizer", T_TEXT);
+        cv_text(6, y + 2, &AF_L, "BURGER", T_THEME);
+        cv_text(6, y + 38, &AF_S, "Burger Studio on Felucca", T_TEXT);
         cv_text(6, y + 58, &AF_M, FELUCCA_VERSION, T_THEME);
         cv_text_r(232, y + 61, &AF_S, __DATE__, T_MID, T_BG);
         cv_text(6, y + 82, &AF_S, "(C) 2026 Leo Kuroshita", T_TEXT);
