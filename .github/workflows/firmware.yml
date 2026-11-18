@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   build:
@@ -43,6 +45,22 @@ jobs:
       - name: Build
         run: ./build.sh --release "${{ steps.v.outputs.ver }}"
 
+      - name: Installer site (GitHub Pages)
+        run: |
+          V="${{ steps.v.outputs.ver }}"
+          python3 web/make_site.py "build/felucca-$V.fwsc" "$V" site
+          ls -R site | head -30
+
+      - uses: actions/configure-pages@v5
+        continue-on-error: true
+        id: pages
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
       - name: Host tests (engines)
         run: sh firmware/engines/tests/run.sh || echo "engine tests failed (see log)"
 
@@ -63,3 +81,13 @@ jobs:
           gh release create "$T" "$D"/* --prerelease --target "$GITHUB_SHA" \
             --title "Burger Studio FM-1 firmware $V" \
             --notes "Burger Studio firmware for the M-VAVE FM-1, built on Felucca 1.8.2 (GPL-3.0-only). Untested on hardware: back up your FM-1 first. Install: python3 tools/fm1_install.py felucca-$V.fwsc"
+
+  pages:
+    needs: build
+    runs-on: ubuntu-22.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
