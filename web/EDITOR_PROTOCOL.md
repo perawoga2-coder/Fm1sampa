@@ -207,6 +207,7 @@ at 1..3 and hides 6 5 8: what it sets still plays the right kit, and the device 
 | 13 SMP_END | slot, pack7 header (480 bytes) | slot, rc: 0 ok, 1 size, 2 header, 3 data CRC, 4 flash, 5 zones |
 | 14 SMP_ERASE | slot | slot, rc (erases the whole slot, ~1 s) |
 | 15 SMP_INFO | — | slots, slot KiB, then per slot: zone count (0 = empty), name string, data KiB |
+| 112 BURGER_SHOW (Burger Studio edition) | slot 0..2, track 0..3, mode (0 SLICE, 1 SAMPLE), flags (bit 0: play it once; bit 1: start the transport again if an upload stopped it) | slot, rc: 0 ok, 1 arguments, 2 the slot is empty, 3 no such engine or source. Selects the track, gives it the engine (only when it has another), sets SRC / SET to the slot; SLICE opens EDIT > SLICES |
 | 16 UP_LIST | start, count (1..16) | start, count, total slots, then per slot: used (0/1), engine, name string ("" if unused); 1.2: then one category byte per slot listed (below; 0 if unused) |
 | 17 UP_GET | slot | slot, used, engine, name, P_COUNT × v14, 16 × (note, flags), then (v5) kind (0 a note pattern, 1 a drum grid) and for kind 1 16 × hi; 1.2: then the category |
 | 18 UP_PUT | slot, engine, name, P_COUNT × v14, 16 × (note, flags) [, kind 0 or 1, 16 × hi (v5) [, category (1.2)]] | slot, rc (0 ok, 1 args, 2 flash). Writes flash: allow 1 s |

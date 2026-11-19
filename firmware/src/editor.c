@@ -18,7 +18,8 @@ enum { ED_INFO = 1, ED_GET, ED_SET, ED_DUMP, ED_DESC, ED_STEP_GET, ED_STEP_SET, 
        ED_TRACK, ED_TRACK_MIX, ED_TRACK_DUMP, ED_TRACK_STEP,                    /* v3: tracks */
        ED_TRACK_PARAM, ED_TRACK_CHANGED, ED_SONG,
        ED_UI_STATE, ED_UI_SET, ED_UI_PALETTES, ED_FAV_GET, ED_FAV_SET,
-       ED_MOTION = 64, ED_BACKUP_LIST, ED_BACKUP_GET, ED_BACKUP_PUT };                              /* v6: song chain */
+       ED_MOTION = 64, ED_BACKUP_LIST, ED_BACKUP_GET, ED_BACKUP_PUT,                              /* v6: song chain */
+       ED_BURGER_SHOW = 112 };                       /* Burger Studio: a sample from the app, ready on a track */
 
 static uint8_t ed_out[664] __attribute__((section(".pool")));   /* (MOTION op 8: 128 records and their kinds, 653 bytes) */
 static uint32_t ed_n;
@@ -83,6 +84,10 @@ static void ed_smp_inval(uint32_t k)
     fl_inval(ed_smp_slot(k), SMP_USER_SIZE);
     fm1_irq_on();
 }
+/* Burger Studio: the transport was playing when an upload began (it stops for the flash writes): BURGER_SHOW starts
+ * it again, so the music goes on with the new sample */
+static uint8_t ed_was_playing;
+
 static int ed_smp_erase(uint32_t k, uint32_t all)  /* header sector, or the whole slot */
 {
     uint32_t i, took;
@@ -605,6 +610,8 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
     case ED_SMP_ERASE:
         if (na < 1u || a[0] >= SMP_USER_SLOTS || !flash_ok)
             return;
+        if (cmd == ED_SMP_BEGIN && song.playing)
+            ed_was_playing = 1;
         ed_b(a[0]);
         ed_b(ed_flash_stop() || ed_smp_erase(a[0], cmd == ED_SMP_ERASE) ? 1u : 0u);
         break;
@@ -641,6 +648,64 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         ed_b(a[0]);
         ed_b((uint32_t)ed_smp_end(a[0], a + 1, na - 1u));
         break;
+    case ED_BURGER_SHOW: {
+        /* Burger Studio (app: Quick sample): slot, track, mode (0 SLICE, 1 SAMPLE), flags (bit 0: play it once,
+         * bit 1: start the transport again if an upload stopped it) -> slot, rc (0 ok, 1 arguments, 2 the slot is
+         * empty, 3 no such engine or source). The track is selected, gets the engine (only when it has another: a
+         * switch loads that engine's first sound, as on the device) and plays the slot; SLICE opens EDIT > SLICES,
+         * where the head and the tail are trimmed with the knobs (ui_slice.c) */
+        uint32_t rc = 0, e = 0, k, src = 0xFFu;
+        const param_desc_t *pd;
+        char want[5] = {'U', 'S', 'R', 0, 0};
+        if (na < 4u || a[0] >= SMP_USER_SLOTS || a[1] >= NTRK || a[2] > 1u) {
+            rc = 1;
+        } else if (!usr_nz[a[0]]) {
+            rc = 2;
+        } else {
+#if FELUCCA_SLICE
+            e = a[2] == 0u ? 13u : ENGI_SAMPLE;
+#else
+            e = ENGI_SAMPLE;
+#endif
+            track_select(a[1]);
+            if (TSEL->eng_req % NENGINES != e)
+                set_engine(e);
+            want[3] = (char)('1' + a[0]);
+            pd = param_desc_of(e, P_E0);
+            for (k = 0; pd->names && (int32_t)k <= pd->max && pd->names[k]; k++)
+                if (str_eq(pd->names[k], want)) {
+                    src = k;
+                    break;
+                }
+            if (src == 0xFFu) {
+                rc = 3;
+            } else {
+                TSEL->p[P_E0] = (int16_t)src;
+                if (e != ENGI_SAMPLE) {                    /* SLICE: straight to its SLICES page */
+                    for (k = 0; k < NPAGES; k++)
+                        if (PAGES[k].graph == GR_SLICES) break;
+                    if (k < NPAGES) {
+                        ui.page = (uint8_t)k;
+                        ui.fam_last[PAGES[k].fam] = ui.page;
+                        ui.home = 0;
+                        page_entered();
+                    }
+                }
+                if (a[3] & 1u) {                           /* hear it once (SLICE's first slice, or a blip) */
+                    uint32_t nt = (uint32_t)clamp(60 + (e == ENGI_SAMPLE ? 0 : TSEL->p[P_ROOT]), 0, 127);   /* slice 0 */
+                    trk_note_on(TSEL, nt, 110u);
+                    trk_note_off(TSEL, nt);
+                }
+                if ((a[3] & 2u) && ed_was_playing && !song.playing)
+                    transport_req = 1;
+                ed_was_playing = 0;
+                ui.force = 1;
+            }
+        }
+        ed_b(na ? a[0] : 0u);
+        ed_b(rc);
+        break;
+    }
     case ED_SMP_INFO:                                      /* -> per slot: zones (0 = empty), name, data KiB */
         ed_b(SMP_USER_SLOTS);
         ed_b(SMP_USER_SIZE / 1024u);
