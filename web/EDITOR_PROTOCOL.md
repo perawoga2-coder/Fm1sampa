@@ -206,7 +206,7 @@ at 1..3 and hides 6 5 8: what it sets still plays the right kit, and the device 
 | 12 SMP_WRITE | slot, offset (3 × 7 bit, LSB first), pack7 data (≤ 256 bytes) | slot, offset, rc: 0 ok, 1 arguments, 2 erase, 3 write, 4 slot in use (send SMP_BEGIN first). Offset ≥ 512 and a multiple of 256; writes go in increasing order (a write at a 4 KiB boundary erases that sector) |
 | 13 SMP_END | slot, pack7 header (480 bytes) | slot, rc: 0 ok, 1 size, 2 header, 3 data CRC, 4 flash, 5 zones |
 | 14 SMP_ERASE | slot | slot, rc (erases the whole slot, ~1 s) |
-| 15 SMP_INFO | — | slots, slot KiB, then per slot: zone count (0 = empty), name string, data KiB |
+| 15 SMP_INFO | — | slots, slot KiB, then per slot: zone count (0 = empty), name string, data KiB (capped at 127); Burger Studio bs10, after the slots: per slot the slots its sample takes (1..3), or 0x40 + the slot whose joined sample covers it |
 | 112 BURGER_SHOW (Burger Studio edition) | slot 0..2, track 0..3, mode (0 SLICE, 1 SAMPLE), flags (bit 0: play it once; bit 1: start the transport again if an upload stopped it) | slot, rc: 0 ok, 1 arguments, 2 the slot is empty, 3 no such engine or source. Selects the track, gives it the engine (only when it has another), sets SRC / SET to the slot; SLICE opens EDIT > SLICES |
 | 113 BURGER_EVENT (push, Burger Studio edition) | — | kind (1: REC on the SLICES page: record a take in the app, or stop it), slot 0..2 (127: the track plays no user slot), track, on (0/1: the device's own toggle). Sent only after the app said hello |
 | 114 BURGER_HELLO (Burger Studio edition) | — | edition and version string, capabilities (bit 0: SHOW and the REC event). Links the app: from then on REC on the SLICES page is the app's |
@@ -1248,3 +1248,12 @@ device gone at ~0.3 s, the MIDI port gone at ~0.57 s and back at ~1.15 s; ON -> 
 at ~0.6 s while the MIDI port was not seen to disappear at all (so do not wait for a disconnect event: after
 a real change, wait ~1.5 s and open again). What the editor sends in that window is lost, `WATCH` ends with the
 bus reset (send `INFO` and `WATCH` again after reconnecting), and a backup in progress answers rc 5 (stale).
+
+### Burger Studio bs10: a sample over slots in a row
+
+The slot header's byte 7 (`rsv`) set to 2 or 3 says the sample takes that many slots from this one on (slot + span <= 3).
+Its data runs on from the slot's +512 through the next slots (flash is one piece; their headers too), up to
+`span x 80 KiB - 512` bytes; SMP_WRITE takes offsets up to the end of the last slot. The slots it covers read as
+empty (SMP_INFO says whose they are). SMP_BEGIN on a covered slot erases the joined sample's header (its data is about
+to be broken). The SLICE record of a joined sample is in the last slot's last sector. Zones may use any rate (the app
+sends 22050, 11025 or 5512.5 Hz). An older firmware refuses a joined header (the data is longer than one slot).

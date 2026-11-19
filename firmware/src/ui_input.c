@@ -1491,11 +1491,28 @@ static int midi_follow(void)
 /* Burger Studio, EDIT SAMPLE: the keys play the slot on screen. The selected track if it is a SLICE track, else
  * the first SLICE track (selected), else the selected track turned into one; its SRC is set to the slot (USR1..3
  * are SLICE's sources 1..3), as the app's Quick sample does (editor.c ED_BURGER_SHOW) */
+static void burger_slot_play(void);
+/* bs10: the slot's track selected (one that plays it, else as burger_slot_play sets one up) */
+static void burger_slot_track(uint32_t s)
+{
+    uint32_t k = burger_slot_owner(s);
+    if (k < NTRK) {
+        track_select(k);
+        return;
+    }
+    burger_slot_edit = (uint8_t)s;                      /* (burger_slot_play: off again by the caller if wanted) */
+    burger_slot_play();
+}
+
 static void burger_slot_play(void)
 {
     uint32_t k;
     if (!burger_slot_edit)
         return;
+    if ((k = burger_slot_owner(burger_slot_edit)) < NTRK) {   /* a track plays it already: that one */
+        track_select(k);
+        return;
+    }
     if (ENGINES[TSEL->eng_req % NENGINES] != &ENG_SLICE) {
         for (k = 0; k < NTRK; k++)
             if (ENGINES[trk[k].eng_req % NENGINES] == &ENG_SLICE) {
@@ -1816,6 +1833,11 @@ static void ui_input(void)
                 }
                 continue;
             }
+            if (ui.home && burger_sample_row && (panel_btn_of(id) == B_ENV || panel_btn_of(id) == B_LFO ||
+                                                 panel_btn_of(id) == B_ARP || panel_btn_of(id) == B_FX)) {
+                burger_slot_track(burger_slot_last ? burger_slot_last : 1u);   /* bs10: the slot's track's pages */
+                burger_slot_edit = 0;
+            }
 #endif
             page_tap(panel_btn_of(id));
         }
@@ -1865,7 +1887,12 @@ static void ui_input(void)
     if (!lay && (s = panel_enc(EN_ALGO)) != 0) {   /* ALGORITHM: the selected track, on every page */
 #if FELUCCA_SLICE
         if (burger_slot_edit) {                     /* Burger Studio, EDIT SAMPLE: the slot USR1..3 */
-            burger_slot_edit = (uint8_t)clamp((int32_t)burger_slot_edit + (s > 0 ? 1 : -1), 1, 3);
+            int32_t ns = (int32_t)burger_slot_edit;
+            do                                          /* (bs10: a slot inside a joined sample is passed over) */
+                ns += s > 0 ? 1 : -1;
+            while (ns >= 1 && ns <= 3 && usr_cov[ns - 1]);
+            if (ns >= 1 && ns <= 3)
+                burger_slot_edit = (uint8_t)ns;
             burger_slot_last = burger_slot_edit;
             burger_slot_play();
             sp.sel = 0;

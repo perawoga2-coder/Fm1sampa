@@ -113,6 +113,21 @@ static int home_levels(void) { return ui_home_view == HV_LEVELS; }
 static uint8_t burger_sample_row;                      /* 1: the SAMPLE row is the one picked on HOME */
 static uint8_t burger_slot_edit;                       /* 1..3: EDIT SAMPLE on USR1..3, 0: off (SLICES is a track's) */
 static uint8_t burger_slot_last = 1;                   /* the slot EDIT SAMPLE opens on */
+#if FELUCCA_SLICE
+/* the track that plays user slot s (1..3): SLICE SRC USRs, SAMPLE SET / GRAIN SRC USRs; NTRK: none */
+static uint32_t burger_slot_owner(uint32_t s)
+{
+    uint32_t k;
+    for (k = 0; k < NTRK; k++) {
+        const engine_t *e = ENGINES[trk[k].eng_req % NENGINES];
+        if ((e == &ENG_SLICE && trk[k].p[P_E0] == (int16_t)s) ||
+            ((e == &ENG_SAMPLE || e == &ENG_GRAIN) && trk[k].p[P_E0] == (int16_t)(SMP_NSETS + s - 1u)))
+            return k;
+    }
+    return NTRK;
+}
+
+#endif
 enum { RP_CLICK, RP_LEVEL, RP_COUNTIN };
 static uint32_t rp_get(uint32_t f)                     /* a field as the MENU steps it: 0..2 */
 {

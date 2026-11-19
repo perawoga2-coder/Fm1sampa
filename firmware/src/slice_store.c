@@ -29,11 +29,14 @@ typedef struct {
 } slc_rec_t;
 _Static_assert(sizeof(slc_rec_t) == 152u, "SLICE record layout");
 
+/* where slot k's record is, from the slot's start: its last sector, or (joined, bs10) the last slot's */
+static uint32_t slc_rec_off(uint32_t k) { return (uint32_t)(usr_span[k] - 1u) * SMP_USER_SIZE + SLC_REC_OFF; }
+
 /* slot k's sample leaves its last sector free (the record can go there) */
 static int slc_rec_room(uint32_t k)
 {
     const smp_user_hdr_t *h = (const smp_user_hdr_t *)smp_user_xip(k);
-    return usr_nz[k] && h->data_len <= SLC_REC_OFF - SMP_USER_DATA;
+    return usr_nz[k] && h->data_len <= slc_rec_off(k) - SMP_USER_DATA;
 }
 
 /* what slot k's record should hold now (its MAN slices in use, or none: n = 0) */
@@ -56,7 +59,7 @@ static void slc_rec_make(uint32_t k, slc_rec_t *r)
 /* slc_man_load (eng_slice.c): slot k was read and is valid: its stored slices, if they are its material's */
 static void slc_store_load(uint32_t k)
 {
-    const slc_rec_t *r = (const slc_rec_t *)(smp_user_xip(k) + SLC_REC_OFF);
+    const slc_rec_t *r = (const slc_rec_t *)(smp_user_xip(k) + slc_rec_off(k));
     const slc_src_t *s = slc_get(k + 1u);
     slc_rec_t c;
     if (!s || !slc_rec_room(k))
@@ -72,13 +75,13 @@ static void slc_store_load(uint32_t k)
 static int slc_store_write(uint32_t k)
 {
     slc_rec_t r;
-    uint32_t off = SMP_USER_BASE + k * SMP_USER_SIZE + SLC_REC_OFF;
+    uint32_t off = SMP_USER_BASE + k * SMP_USER_SIZE + slc_rec_off(k);
     if (!usr_nz[k])                                  /* emptied or being uploaded meanwhile: nothing to keep */
         return 0;
     if (!slc_rec_room(k))
         return 1;
     slc_rec_make(k, &r);
-    if (!memcmp(&r, smp_user_xip(k) + SLC_REC_OFF, sizeof r))
+    if (!memcmp(&r, smp_user_xip(k) + slc_rec_off(k), sizeof r))
         return 0;                                    /* unchanged: no erase cycle */
     if (st_erase(off) || st_prog(off, &r, sizeof r))
         return 2;

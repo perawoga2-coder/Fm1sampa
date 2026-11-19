@@ -258,7 +258,7 @@ static void slc_scan(slc_src_t *s, uint32_t len)
 /* smp_user_scan (eng_sample.c): valid 0 = the slot changes (SLICE voices on it stop), 1 = it is valid.
  * The material is at most what the slot can hold (SLC_USR_MAX samples): zones over different (overlapping) data
  * past that are left out, so a crafted header cannot make the scan (at boot too) run long */
-#define SLC_USR_MAX (2u * (SMP_USER_SIZE - SMP_USER_DATA))
+#define SLC_USR_MAX (2u * SMP_USER_CAP(SMP_USER_SLOTS))   /* (a joined sample: up to three slots) */
 static void slc_user_scan(uint32_t k, int valid)
 {
     slc_src_t *s = &slc_usr[k];

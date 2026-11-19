@@ -58,6 +58,16 @@ typedef struct {
 } smp_user_hdr_t;                                   /* 32 + 16 x 28 = 480 B, data at +512 */
 static smp_zone_t usr_zone[SMP_USER_SLOTS][16];     /* RAM copy, off rebased onto SMP_DATA */
 static uint8_t usr_nz[SMP_USER_SLOTS];
+/* Burger Studio (bs10): a sample may take 2 or 3 slots in a row (the header's rsv byte: 2 or 3; else 1). Its data
+ * runs on from slot k's +512 through the next slots (their headers too: the flash is one piece); the slots it covers
+ * read as empty and say whose they are. The SLICE record of a joined sample sits in the last slot's last sector */
+static uint8_t usr_span[SMP_USER_SLOTS] = {1, 1, 1};   /* slots slot k's sample takes */
+static uint8_t usr_cov[SMP_USER_SLOTS];             /* 0, else 1 + the slot whose joined sample covers slot k */
+#define SMP_USER_CAP(span) ((uint32_t)(span) * SMP_USER_SIZE - SMP_USER_DATA)
+static uint32_t smp_user_span_of(const smp_user_hdr_t *h, uint32_t k)
+{
+    return h->rsv >= 2u && k + h->rsv <= SMP_USER_SLOTS ? h->rsv : 1u;
+}
 static const char *const SMP_ALL_NAMES[SMP_NALL] = {SMP_SET_NAMES_INIT, "USR1", "USR2", "USR3"};
 
 #ifndef SMP_USER_XIP                                /* host tests: a RAM image of the slots */
@@ -78,17 +88,29 @@ static void smp_user_scan(uint32_t k)
 {
     const smp_user_hdr_t *h = (const smp_user_hdr_t *)smp_user_xip(k);
     smp_zone_t zt[16];
-    uint32_t i, base, nz = 0;
+    uint32_t i, j, base, nz = 0, span = 1, freed = 0;
     smp_user_gen++;
     usr_nz[k] = 0;
     slc_user_scan(k, 0);
+    for (j = 0; j < SMP_USER_SLOTS; j++)            /* (joined: the slots it covered are let go, read again below) */
+        if (usr_cov[j] == k + 1u) {
+            usr_cov[j] = 0;
+            freed |= 1u << j;
+        }
+    usr_span[k] = 1;
+    if (usr_cov[k]) {                               /* inside an earlier slot's joined sample: empty */
+        for (i = 0; i < 16u; i++)
+            usr_zone[k][i] = (smp_zone_t){0};
+        return;
+    }
     if (h->magic == SMP_USER_MAGIC && h->version == 1 && h->nz && h->nz <= 16u &&
-        h->data_len <= SMP_USER_SIZE - SMP_USER_DATA) {
+        h->data_len <= SMP_USER_CAP(smp_user_span_of(h, k))) {
+        span = smp_user_span_of(h, k);
         base = (uint32_t)(uintptr_t)(smp_user_xip(k) + SMP_USER_DATA) - (uint32_t)(uintptr_t)SMP_DATA;
         for (nz = h->nz, i = 0; i < nz; i++) {
             smp_zone_t *z = &zt[i];
             *z = h->zone[i];
-            if (z->off > h->data_len || z->n > 2u * SMP_USER_SIZE || z->off + (z->n + 1u) / 2u > h->data_len ||
+            if (z->off > h->data_len || z->n > 2u * SMP_USER_CAP(span) || z->off + (z->n + 1u) / 2u > h->data_len ||
                 z->idx > 88u || !z->rate || z->rate > 4u << 16 || z->ls > z->le || z->le >= z->n || z->lo > z->hi) {
                 nz = 0;                             /* zone outside the data or malformed: slot unusable */
                 break;
@@ -98,10 +120,23 @@ static void smp_user_scan(uint32_t k)
     }
     for (i = 0; i < 16u; i++)
         usr_zone[k][i] = i < nz ? zt[i] : (smp_zone_t){0};
-    if (!nz)
-        return;
-    usr_nz[k] = (uint8_t)nz;
-    slc_user_scan(k, 1);
+    if (nz) {
+        usr_nz[k] = (uint8_t)nz;
+        usr_span[k] = (uint8_t)span;
+        for (j = k + 1u; j < k + span; j++) {       /* the slots it takes: empty, covered */
+            usr_cov[j] = (uint8_t)(k + 1u);
+            usr_nz[j] = 0;
+            usr_span[j] = 1;
+            for (i = 0; i < 16u; i++)
+                usr_zone[j][i] = (smp_zone_t){0};
+            slc_user_scan(j, 0);
+            freed &= ~(1u << j);
+        }
+        slc_user_scan(k, 1);
+    }
+    for (j = 0; j < SMP_USER_SLOTS; j++)            /* let go and not taken again: what they hold now */
+        if ((freed >> j) & 1u)
+            smp_user_scan(j);
 }
 
 /* A missing sample (SAMPLE, GRAIN, SLICE: an empty or invalid user slot, a set this build has no data for) plays

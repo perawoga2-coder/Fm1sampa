@@ -81,7 +81,7 @@ static uint32_t ed_smp_slot(uint32_t k) { return SMP_USER_BASE + k * SMP_USER_SI
 static void ed_smp_inval(uint32_t k)
 {
     fm1_irq_off();
-    fl_inval(ed_smp_slot(k), SMP_USER_SIZE);
+    fl_inval(ed_smp_slot(k), (SMP_USER_SLOTS - k) * SMP_USER_SIZE);   /* (bs10: a joined sample reaches on) */
     fm1_irq_on();
 }
 /* Burger Studio: the transport was playing when an upload began (it stops for the flash writes): BURGER_SHOW starts
@@ -112,13 +112,42 @@ static void burger_app_rec(void)
     ui_message(on ? "APP: REC" : "APP: STOP");
 }
 
-static int ed_smp_erase(uint32_t k, uint32_t all)  /* header sector, or the whole slot */
+/* Burger Studio (bs10): slot k is about to be written: its sample stops being playable (live voices end), a joined
+ * sample it was part of goes (that sample's header is erased: its data is about to be broken), the slots a joined
+ * sample of its own covered are let go */
+static int ed_smp_kill(uint32_t k)
 {
-    uint32_t i, took;
+    uint32_t i, j, o, took;
     int rc = 0;
     usr_nz[k] = 0;
     for (i = 0; i < 16u; i++)
-        usr_zone[k][i].n = 0;                     /* a sounding voice ends instead of reading 0xFF */
+        usr_zone[k][i].n = 0;
+    if (usr_cov[k]) {
+        o = usr_cov[k] - 1u;
+        usr_nz[o] = 0;
+        for (i = 0; i < 16u; i++)
+            usr_zone[o][i].n = 0;
+        slc_user_scan(o, 0);
+        audio_silence();
+        rc = fl_erase4k(ed_smp_slot(o), &took);
+        fm1_wdt_feed();
+        ed_smp_inval(o);
+        usr_span[o] = 1;
+        for (j = 0; j < SMP_USER_SLOTS; j++)
+            if (usr_cov[j] == o + 1u)
+                usr_cov[j] = 0;
+    }
+    for (j = 0; j < SMP_USER_SLOTS; j++)
+        if (usr_cov[j] == k + 1u)
+            usr_cov[j] = 0;
+    usr_span[k] = 1;
+    return rc;
+}
+
+static int ed_smp_erase(uint32_t k, uint32_t all)  /* header sector, or the whole slot */
+{
+    uint32_t i, took;
+    int rc = ed_smp_kill(k);                      /* (a sounding voice ends instead of reading 0xFF) */
     for (i = 0; i < (all ? SMP_USER_SIZE / 0x1000u : 1u) && !rc; i++) {
         audio_silence();
         rc = fl_erase4k(ed_smp_slot(k) + i * 0x1000u, &took);
@@ -134,7 +163,7 @@ static int ed_smp_end(uint32_t k, const uint8_t *a, uint32_t na)
     if (ed_unpack7(a, na, ed_smp_buf, sizeof(smp_user_hdr_t)) != sizeof(smp_user_hdr_t))
         return 1;
     if (h->magic != SMP_USER_MAGIC || h->version != 1 || !h->nz || h->nz > 16u ||
-        h->data_len > SMP_USER_SIZE - SMP_USER_DATA)
+        h->data_len > SMP_USER_CAP(smp_user_span_of(h, k)))
         return 2;
     if (usr_nz[k])                                     /* published zones may still be read by live voices */
         return memcmp(h, smp_user_xip(k), sizeof *h) ? 2 : 0;
@@ -645,14 +674,17 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
             return;
         off = (uint32_t)a[1] | (uint32_t)a[2] << 7 | (uint32_t)a[3] << 14;
         len = ed_unpack7(a + 4, na - 4u, ed_smp_buf, 256u);
-        if (off < SMP_USER_DATA || (off & 0xFFu) || !len || off + len > SMP_USER_SIZE)
-            rc = 1;
+        if (off < SMP_USER_DATA || (off & 0xFFu) || !len || off + len > (SMP_USER_SLOTS - a[0]) * SMP_USER_SIZE)
+            rc = 1;                                        /* (bs10: on into the next slots, a joined sample) */
         else if (usr_nz[a[0]])
             rc = 4;                                        /* slot in use: SMP_BEGIN first (voices read it) */
         else if (ed_flash_stop())
             rc = 1;
         else {
-            if (!(off & 0xFFFu)) {                         /* first write into a sector: erase it */
+            if (!(off % SMP_USER_SIZE) && (usr_nz[a[0] + off / SMP_USER_SIZE] || usr_cov[a[0] + off / SMP_USER_SIZE] ||
+                                           usr_span[a[0] + off / SMP_USER_SIZE] > 1u))
+                rc = ed_smp_kill(a[0] + off / SMP_USER_SIZE) ? 2u : 0u;   /* into the next slot: what it held goes */
+            if (!rc && !(off & 0xFFFu)) {                  /* first write into a sector: erase it */
                 audio_silence();
                 rc = fl_erase4k(ed_smp_slot(a[0]) + off, &took) ? 2u : 0u;
             }
@@ -747,8 +779,10 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
             for (j = 0; usr_nz[i] && j < 8u; j++)
                 nm[j] = h->name[j] >= 32 && h->name[j] < 127 ? h->name[j] : 0;
             ed_str(nm, 8);
-            ed_b(usr_nz[i] ? (h->data_len + 1023u) / 1024u : 0u);
+            ed_b(usr_nz[i] ? ((h->data_len + 1023u) / 1024u > 127u ? 127u : (h->data_len + 1023u) / 1024u) : 0u);
         }
+        for (i = 0; i < SMP_USER_SLOTS; i++)               /* bs10, after the slots (an older app stops before): */
+            ed_b(usr_cov[i] ? 0x40u | (usr_cov[i] - 1u) : usr_span[i]);   /* the slots its sample takes, or whose */
         break;
     case ED_UP_LIST: {                                     /* start, count -> start, count, total, per slot: used, engine, name;
                                                             * (1.2) then per slot its category (category.c CAT_*, 0 unused):

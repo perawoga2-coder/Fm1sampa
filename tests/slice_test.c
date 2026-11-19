@@ -861,6 +861,53 @@ int main(int argc, char **argv)
     sine_ok("GRAIN on an empty USR3: C5", sine_run(8u, (int16_t)(SMP_NSETS + 2), 72), 523.25);
     check("SLICE on USR1 (a sample), SAMPLE on PIANO: not the sine", !sine_run(SLC_ENG, 1, 60).sine &&
           !sine_run(4u, 0, 60).sine, 0);
+    /* 8 (Burger Studio bs10): a sample joined over the three slots; the slots it covers; the record in the last slot */
+    {
+        smp_user_hdr_t *h = (smp_user_hdr_t *)host_slots;
+        uint8_t *d = (uint8_t *)host_slots;
+        uint32_t i, len = 2u * SMP_USER_SIZE + 0x8000u, ok;
+        for (i = 0; i < 3u; i++)
+            smp_user_scan(i);
+        memset(host_slots, 0xFF, sizeof host_slots);
+        for (i = 0; i < len; i++)
+            d[SMP_USER_DATA + i] = (uint8_t)(i * 2654435761u >> 13);
+        memset(h, 0, sizeof *h);
+        h->magic = SMP_USER_MAGIC;
+        h->version = 1;
+        h->nz = 1;
+        h->rsv = 3;
+        h->data_len = len;
+        h->crc = st_crc32(d + SMP_USER_DATA, len);
+        h->zone[0] = (smp_zone_t){0, 2u * len, 0, 2u * len - 1u, (uint32_t)(5512.5 / 44100.0 * 65536.0 + 0.5), 60 * 16, 0, 0, 0, 127, 0};
+        for (i = 0; i < 3u; i++)
+            smp_user_scan(i);
+        ok = usr_nz[0] == 1u && usr_span[0] == 3u && !usr_nz[1] && !usr_nz[2] && usr_cov[1] == 1u && usr_cov[2] == 1u &&
+             slc_get(1) && slc_get(1)->len == 2u * len && !slc_get(2) && !slc_get(3);
+        check("bs10: one sample over USR1..3 (LO-FI rate): USR2, USR3 read as covered", ok,
+              "%u samples, span %u, cover %u %u", slc_get(1) ? slc_get(1)->len : 0u, usr_span[0], usr_cov[1], usr_cov[2]);
+        check("bs10: its SLICE record goes into USR3's last sector, room left",
+              slc_rec_off(0) == 2u * SMP_USER_SIZE + SLC_REC_OFF && slc_rec_room(0), "%x", slc_rec_off(0));
+        h->rsv = 2;                                        /* the same data said to take two slots: too long, refused */
+        smp_user_scan(0);
+        check("bs10: data longer than its slots: the slot is unusable, the covered ones let go",
+              !usr_nz[0] && !usr_cov[1] && !usr_cov[2] && usr_span[0] == 1u, 0);
+        h->rsv = 3;
+        smp_user_scan(0);
+        h->rsv = 0;                                        /* a one-slot sample written over it: USR2 / USR3 come back */
+        h->data_len = 0x1000u;
+        h->crc = st_crc32(d + SMP_USER_DATA, h->data_len);
+        h->zone[0].n = h->zone[0].le + 1u > 0x2000u ? 0x2000u : h->zone[0].n;
+        h->zone[0].le = h->zone[0].n - 1u;
+        {
+            smp_user_hdr_t *h2 = (smp_user_hdr_t *)(d + 2u * SMP_USER_SIZE);
+            *h2 = *h;                                      /* (USR3 holds a sample of its own again) */
+            smp_user_scan(0);
+            ok = usr_nz[0] && usr_span[0] == 1u && !usr_cov[1] && !usr_cov[2] && !usr_nz[1] && usr_nz[2] == 1u;
+            check("bs10: back to one slot: USR2 empty (its bytes were the old data), USR3 its own sample", ok,
+                  "nz %u %u %u", usr_nz[0], usr_nz[1], usr_nz[2]);
+        }
+    }
+
     printf("slice: %s\n", fails ? "FAILED" : "all checks ok");
     return fails != 0;
 }

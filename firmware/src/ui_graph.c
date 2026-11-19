@@ -1908,8 +1908,11 @@ static void home_sample_row(uint32_t pos)
     uint32_t sel = burger_sample_row, large = (ui_prefs & PREF_LARGE) != 0u, k, sig;
     int32_t y = Y_GRAPH + (int32_t)pos * TR_PITCH, x, ch = large ? AF_M_CAP_H : AF_S_CAP_H;
     uint16_t bg = sel ? T_THEME : T_SURF;
+    uint32_t own = burger_slot_owner(burger_slot_last ? burger_slot_last : 1u);   /* bs10: the track that plays it */
+    char tl[20];
     sig = 0xB5u + sel * 2u + large * 4u + pos * 8u + (uint32_t)usr_nz[0] * 64u + (uint32_t)usr_nz[1] * 4096u +
-          (uint32_t)usr_nz[2] * 262144u + burger_slot_last * 16777216u;
+          (uint32_t)usr_nz[2] * 262144u + burger_slot_last * 16777216u + own * 0x10000000u +
+          ((uint32_t)usr_cov[1] + 4u * usr_cov[2]) * 0x40000000u;
     if (!ui.force && sig == ts_sample_sig)
         return;
     ts_sample_sig = sig;
@@ -1918,15 +1921,29 @@ static void home_sample_row(uint32_t pos)
     cv_icon_mid(4, TR_H / 2, 16, ICON_SAMPLE, sel ? T_INK : T_MID, bg);
     cv_free_text(24, TR_NY(large) - (large ? AF_M_CAP_Y : AF_S_CAP_Y), large ? &AF_M : &AF_S, "SAMPLE",
                  sel ? T_INK : T_TEXT, bg, 90);
-    if (!large)
-        cv_free_text(24, 16 - AF_S_CAP_Y, &AF_S, sel ? "EDIT: EDIT SAMPLE" : "USR1-3", sel ? T_INK : T_MID, bg, 110);
+    if (!large) {
+        const char *t0 = own < NTRK ? (sel ? "EDIT SAMPLE  T" : "USR1-3  ON T") : (sel ? "EDIT: EDIT SAMPLE" : "USR1-3");
+        uint32_t n = 0;                              /* own: "EDIT SAMPLE  T2", where its ENV / LFO / ARP pages are */
+        while (t0[n] && n < sizeof tl - 2u) {
+            tl[n] = t0[n];
+            n++;
+        }
+        if (own < NTRK)
+            tl[n++] = (char)('1' + own);
+        tl[n] = 0;
+        cv_free_text(24, 16 - AF_S_CAP_Y, &AF_S, tl, sel ? T_INK : T_MID, bg, 110);
+    }
     cv_text_on(148, (TR_H - AF_S_CAP_H) / 2 - AF_S_CAP_Y, &AF_S, "USR", sel ? T_INK : T_MID, bg);
     for (k = 0; k < 3u; k++) {                       /* the three slots: a pill each, lit when it holds a sample */
         static const char *const N[3] = {"1", "2", "3"};
-        uint16_t on = usr_nz[k] ? (sel ? T_INK : T_THEME) : (sel ? ux_mix(T_THEME, T_INK, 35) : T_RAISE);
+        uint32_t lit = usr_nz[k] || usr_cov[k];      /* (bs10: a slot inside a joined sample: lit, joined to the one before) */
+        uint16_t on = lit ? (sel ? T_INK : T_THEME) : (sel ? ux_mix(T_THEME, T_INK, 35) : T_RAISE);
         x = 176 + (int32_t)k * 18;
         cv_rrect(x, (TR_H - 15) / 2, 16, 15, 4, on, bg);
-        cv_text_on(x + 4, (TR_H - AF_S_CAP_H) / 2 - AF_S_CAP_Y, &AF_S, N[k], usr_nz[k] ? (sel ? T_THEME : T_INK) : T_DIM, on);
+        if (usr_cov[k])
+            cv_rect(x - 4, (TR_H - 15) / 2 + 5, 6, 5, on);
+        else
+            cv_text_on(x + 4, (TR_H - AF_S_CAP_H) / 2 - AF_S_CAP_Y, &AF_S, N[k], usr_nz[k] ? (sel ? T_THEME : T_INK) : T_DIM, on);
         (void)ch;
     }
     cv_blit(3, (uint32_t)y);
