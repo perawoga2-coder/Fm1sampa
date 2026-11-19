@@ -1487,6 +1487,33 @@ static int midi_follow(void)
     return (int)k;
 }
 
+#if FELUCCA_SLICE
+/* Burger Studio, EDIT SAMPLE: the keys play the slot on screen. The selected track if it is a SLICE track, else
+ * the first SLICE track (selected), else the selected track turned into one; its SRC is set to the slot (USR1..3
+ * are SLICE's sources 1..3), as the app's Quick sample does (editor.c ED_BURGER_SHOW) */
+static void burger_slot_play(void)
+{
+    uint32_t k;
+    if (!burger_slot_edit)
+        return;
+    if (ENGINES[TSEL->eng_req % NENGINES] != &ENG_SLICE) {
+        for (k = 0; k < NTRK; k++)
+            if (ENGINES[trk[k].eng_req % NENGINES] == &ENG_SLICE) {
+                track_select(k);
+                break;
+            }
+        if (k == NTRK) {
+            for (k = 0; k < NENGINES && ENGINES[k] != &ENG_SLICE; k++)
+                ;
+            if (k < NENGINES)
+                set_engine(k);
+        }
+    }
+    if (ENGINES[TSEL->eng_req % NENGINES] == &ENG_SLICE)
+        TSEL->p[P_E0] = (int16_t)burger_slot_edit;
+}
+#endif
+
 /* messages of things that happened elsewhere (a load, the editor, MIDI in): after this frame's own */
 static void ui_notices(void)
 {
@@ -1779,6 +1806,7 @@ static void ui_input(void)
                     ;
                 burger_slot_edit = burger_slot_last ? burger_slot_last : 1u;
                 burger_div = (int16_t)SLC_DIV_AUTO;
+                burger_slot_play();                     /* (the keys play the slot shown, not the track's bank sound) */
                 sp.sel = 0;
                 if (k < NPAGES) {
                     ui.page = (uint8_t)k;
@@ -1839,6 +1867,7 @@ static void ui_input(void)
         if (burger_slot_edit) {                     /* Burger Studio, EDIT SAMPLE: the slot USR1..3 */
             burger_slot_edit = (uint8_t)clamp((int32_t)burger_slot_edit + (s > 0 ? 1 : -1), 1, 3);
             burger_slot_last = burger_slot_edit;
+            burger_slot_play();
             sp.sel = 0;
             ui.force = 1;
         } else if (ui.home && home_tracks() && s > 0 && song.sel == NTRK - 1u) {
