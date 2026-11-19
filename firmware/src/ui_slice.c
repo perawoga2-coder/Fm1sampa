@@ -24,17 +24,20 @@ static struct {
     int8_t lo[SP_COLS], hi[SP_COLS];                 /* per column: smallest / largest sample >> 9 */
 } sp;
 
-static int slice_page_ok(void) { return ENGINES[TSEL->eng_req % NENGINES] == &ENG_SLICE; }
+static int slice_page_ok(void) { return burger_slot_edit || ENGINES[TSEL->eng_req % NENGINES] == &ENG_SLICE; }
+/* Burger Studio, EDIT SAMPLE: the slot's own DIV while no track is asked (AUTO until it has slices set by hand) */
+static int16_t burger_div = (int16_t)SLC_DIV_AUTO;
+static int16_t *slice_divp(void) { return burger_slot_edit ? &burger_div : &TSEL->p[P_E1]; }
 static int slice_page_on(void) { return !ui.home && cur_page()->graph == GR_SLICES && slice_page_ok(); }
 
 /* the source the selected part plays, its DIV; 0 = no material (an empty slot: the sine, as slice_note_on) */
 static const slc_src_t *slice_src(uint32_t *src, uint32_t *div)
 {
     const int16_t *p = TSEL->p;
-    uint32_t k = slc_src_of(p);
+    uint32_t k = burger_slot_edit ? (uint32_t)burger_slot_edit : slc_src_of(p);   /* (USR1..3 are sources 1..3) */
     const slc_src_t *s = slc_get(k);
     *src = k;
-    *div = (uint32_t)clamp(p[P_E1], 0, SLC_DIV_MAN);
+    *div = (uint32_t)clamp(*slice_divp(), 0, SLC_DIV_MAN);
     return s;
 }
 
@@ -89,7 +92,7 @@ static slc_man_t *slice_edit_begin(uint32_t *k)
     }
     *k = src - 1u;
     if (div != SLC_DIV_MAN && slc_man_of(s)) {       /* the slot has slices set by hand: those, not the grid; this */
-        TSEL->p[P_E1] = SLC_DIV_MAN;                 /* touch only shows them (its marker was another one) */
+        *slice_divp() = SLC_DIV_MAN;                 /* touch only shows them (its marker was another one) */
         ui_message("DIV MAN");
         return 0;
     }
@@ -115,8 +118,8 @@ static slc_man_t *slice_edit_begin(uint32_t *k)
 static void slice_edit_end(uint32_t k)
 {
     slc_man_commit(k);
-    if (TSEL->p[P_E1] != SLC_DIV_MAN) {
-        TSEL->p[P_E1] = SLC_DIV_MAN;                 /* (the editor sees it as any change of the value) */
+    if (*slice_divp() != SLC_DIV_MAN) {
+        *slice_divp() = SLC_DIV_MAN;                 /* (the editor sees it as any change of the value) */
         ui_message("DIV MAN");
     }
     slc_man_save |= (uint8_t)(1u << k);              /* to flash when the page is left (slice_store.c) */

@@ -690,6 +690,8 @@ static void write_ppm(const char *dir, const char *pal, const char *name)
 static void pal(uint32_t p) { settings.palette = p; palette_set(p); }
 static void state(void)                          /* a playing song with steps on every track */
 {
+    burger_sample_row = 0;                             /* (Burger Studio: HOME starts at T1, SLICES a track's) */
+    burger_slot_edit = 0;
     uint32_t i;
     ui_power_on();
     seq_fill = 0;                                /* (1.5.5: GLO's FILL, held in layer_glo_fill only; */
@@ -803,7 +805,7 @@ enum { S_HOME, S_HOME_IDLE, S_MESSAGE, S_MESSAGE_KEY, S_MESSAGE_NOFILE, S_PRESET
        S_DETAIL, S_DETAIL_PLAYING, S_DETAIL_REST, S_DETAIL_DRUM, S_ROLL_MARKS, S_DRUM_MARKS, S_HELP_DETAIL,
        S_DETAIL_COND, S_DETAIL_FILL, S_AUTO_COND, S_GLO_FILL, S_SEQ_EUCLID, S_SEQ_EUCLID_DRUM, S_SEQ_EUCLID_64,
        S_MENU_SELECT, S_PROJECT_ERASE, S_CONFIRM_ERASE_PROJ, S_TOOLS_CLEAN, S_CONFIRM_CLEAN,
-       S_MENU_MIDI_TRACK, S_MENU_MIDI_TCH_UNUSED, S_MENU_MIDI_AUTO, S_HOME_TRACKS_MIDI, S_MIXER_MIDI, S_EDIT_PHASE_FOLD, S_COUNT };
+       S_MENU_MIDI_TRACK, S_MENU_MIDI_TCH_UNUSED, S_MENU_MIDI_AUTO, S_HOME_TRACKS_MIDI, S_MIXER_MIDI, S_EDIT_PHASE_FOLD, S_HOME_SAMPLE, S_BURGER_EDIT_SAMPLE, S_COUNT };
 static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "message_key", "message_nofile", "presets", "presets_nofav", "user",
     "phrases", "project", "tools", "song_empty", "song", "step", "auto_steps", "auto_add_chance", "automation", "drum",
     "drum_hand", "drum_cym", "mixer", "mixer_from_home", "mixer_pan", "env", "env_dest", "lfo", "mod", "fx", "slicer", "dly", "scl", "chord", "chord_wide", "chord_off", "chord_kit", "arp",
@@ -834,7 +836,7 @@ static const char *const S_NAME[S_COUNT] = {"home", "home_idle", "message", "mes
     "detail_cond", "detail_fill", "auto_cond", "layer_glo_fill", "layer_seq_euclid", "layer_seq_euclid_drum",
     "layer_seq_euclid_64",
     "menu_select", "project_erase", "confirm_erase_project", "tools_clean", "confirm_clean",
-    "menu_midi_track", "menu_midi_channels_unused", "menu_midi_auto_select", "home_tracks_midi", "mixer_midi", "edit_phase_fold"};
+    "menu_midi_track", "menu_midi_channels_unused", "menu_midi_auto_select", "home_tracks_midi", "mixer_midi", "edit_phase_fold", "home_sample", "burger_edit_sample"};
 
 /* the STEP page's piano roll (ui_graph.c graph_roll) on track 1, stopped unless said: an empty pattern; ACID in
  * A minor; POLY chords (Am7 F C G, tied); a line with ties, slides and accents in C major; LEN 32 on its second
@@ -1656,6 +1658,15 @@ static void setup(int s)
         ui.hot_col = 1; ui.hot_t = 30;
         break;
     case S_SLICES_NOFILE: eng(13u); TSEL->p[P_E0] = 2; go_page(GR_SLICES); ui.msg_t = 0; break;   /* USR2 empty: SAMPLE NOT FOUND */
+    case S_HOME_SAMPLE:                                /* Burger Studio: HOME's rows scrolled to SAMPLE */
+        host_slot_make(0); smp_user_scan(0);
+        tracks_scene(1); song.sel = NTRK - 1u; burger_sample_row = 1; ui.force = 1;
+        break;
+    case S_BURGER_EDIT_SAMPLE:                         /* Burger Studio: EDIT SAMPLE on USR1, a non-SLICE track selected */
+        eng(4u); host_slot_make(0); smp_user_scan(0);
+        burger_slot_edit = 1; burger_div = (int16_t)SLC_DIV_AUTO;
+        go_page(GR_SLICES); sp.sel = 0; slice_knob(0, 1); ui.msg_t = 0;
+        break;
 #endif
     default: break;
     }

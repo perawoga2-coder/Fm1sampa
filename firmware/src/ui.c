@@ -108,6 +108,11 @@ static uint32_t leds_inv(void) { return settings_leds == LEDS_INV && ui_leds_inv
 enum { HV_SCOPE, HV_TRACKS, HV_LEVELS, HV_COUNT };
 static int home_tracks(void) { return ui_home_view == HV_TRACKS || ui_home_view == HV_LEVELS; }
 static int home_levels(void) { return ui_home_view == HV_LEVELS; }
+/* Burger Studio: HOME's rows have a fifth one under the four tracks, SAMPLE (ALGORITHM turns down to it); EDIT on it
+ * opens EDIT SAMPLE: the SLICES page on a user slot USR1..3 itself, whatever the tracks play (ui_slice.c) */
+static uint8_t burger_sample_row;                      /* 1: the SAMPLE row is the one picked on HOME */
+static uint8_t burger_slot_edit;                       /* 1..3: EDIT SAMPLE on USR1..3, 0: off (SLICES is a track's) */
+static uint8_t burger_slot_last = 1;                   /* the slot EDIT SAMPLE opens on */
 enum { RP_CLICK, RP_LEVEL, RP_COUNTIN };
 static uint32_t rp_get(uint32_t f)                     /* a field as the MENU steps it: 0..2 */
 {
@@ -437,7 +442,7 @@ static int page_visible(uint32_t i)
         return TSEL->eng_req % NENGINES == ENGI_FM6;
 #if FELUCCA_SLICE
     if (PAGES[i].graph == GR_SLICES)
-        return ENGINES[TSEL->eng_req % NENGINES] == &ENG_SLICE;
+        return burger_slot_edit || ENGINES[TSEL->eng_req % NENGINES] == &ENG_SLICE;
 #else
     if (PAGES[i].graph == GR_SLICES)
         return 0;

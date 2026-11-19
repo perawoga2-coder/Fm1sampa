@@ -1771,8 +1771,32 @@ static void ui_input(void)
     b = ui.pg_down & ~fm1_in.buttons;
     ui.pg_down &= (uint16_t)~b;
     for (id = 0; b; id++, b >>= 1)
-        if (b & 1u)
+        if (b & 1u) {
+#if FELUCCA_SLICE
+            if (ui.home && burger_sample_row && panel_btn_of(id) == B_EDIT) {   /* Burger Studio: EDIT on SAMPLE */
+                uint32_t k;
+                for (k = 0; k < NPAGES && PAGES[k].graph != GR_SLICES; k++)
+                    ;
+                burger_slot_edit = burger_slot_last ? burger_slot_last : 1u;
+                burger_div = (int16_t)SLC_DIV_AUTO;
+                sp.sel = 0;
+                if (k < NPAGES) {
+                    ui.page = (uint8_t)k;
+                    ui.home = 0;
+                    page_entered();
+                    ui.force = 1;
+                }
+                continue;
+            }
+#endif
             page_tap(panel_btn_of(id));
+        }
+#if FELUCCA_SLICE
+    if (burger_slot_edit && (ui.home || cur_page()->graph != GR_SLICES))
+        burger_slot_edit = 0;                           /* EDIT SAMPLE left: SLICES is a SLICE track's page again */
+#endif
+    if (!ui.home && burger_sample_row)
+        burger_sample_row = 0;                          /* (HOME left: the rows start at T1 again) */
     if (act_cols() && (oct & 2u)) {                     /* action pages: OCT+ does the picked action, */
         act_do();
     } else if (act_cols() && (oct & 1u)) {              /* OCT- drops it, or (none picked) goes HOME */
@@ -1810,8 +1834,31 @@ static void ui_input(void)
     kq |= lay;
     if (!lay && (s = panel_enc(EN_PRESET)) != 0)
         presets_turn(s);
-    if (!lay && (s = panel_enc(EN_ALGO)) != 0)     /* ALGORITHM: the selected track, on every page */
-        track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, NTRK - 1));
+    if (!lay && (s = panel_enc(EN_ALGO)) != 0) {   /* ALGORITHM: the selected track, on every page */
+#if FELUCCA_SLICE
+        if (burger_slot_edit) {                     /* Burger Studio, EDIT SAMPLE: the slot USR1..3 */
+            burger_slot_edit = (uint8_t)clamp((int32_t)burger_slot_edit + (s > 0 ? 1 : -1), 1, 3);
+            burger_slot_last = burger_slot_edit;
+            sp.sel = 0;
+            ui.force = 1;
+        } else if (ui.home && home_tracks() && s > 0 && song.sel == NTRK - 1u) {
+            if (!burger_sample_row) {               /* Burger Studio: past T4, the SAMPLE row */
+                burger_sample_row = 1;
+                ui.force = 1;
+            }
+        } else if (ui.home && burger_sample_row && s < 0) {
+            burger_sample_row = 0;                  /* back up to T4 */
+            ui.force = 1;
+        } else
+#endif
+        {
+            if (burger_sample_row) {
+                burger_sample_row = 0;
+                ui.force = 1;
+            }
+            track_select((uint32_t)clamp((int32_t)song.sel + (s > 0 ? 1 : -1), 0, NTRK - 1));
+        }
+    }
     if ((s = glo ? sel : panel_enc(EN_SELECT)) != 0) {   /* SELECT knob = global tempo; */
         if (!glo && sel_mode() >= SEL_MODW) {         /* MENU > SELECT MODW / VEL (1.5.6, #84): it plays */
             sel_play(sel_mode(), s);

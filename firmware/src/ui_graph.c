@@ -1144,6 +1144,14 @@ static uint32_t strip_kind(void)
  * scale ("C MIN"); ti holds 20 (the footer, the strip) */
 static void page_title(char *ti)
 {
+#if FELUCCA_SLICE
+    if (burger_slot_edit && cur_page()->graph == GR_SLICES) {   /* Burger Studio: EDIT SAMPLE USR1..3 */
+        str_cpy(ti, "EDIT SAMPLE USR", 20);
+        ti[15] = (char)('0' + burger_slot_edit);
+        ti[16] = 0;
+        return;
+    }
+#endif
     const page_t *pg = cur_page();
     const track_t *t = TSEL;
     const engine_t *e = ENGINES[t->eng_req % NENGINES];
@@ -1804,13 +1812,13 @@ static void tr_meter(int32_t x, int32_t y, uint32_t c, uint16_t slot, uint16_t f
     if (m)
         cv_rrect(x, y + TR_MH - m, 4, m, m >= 4 ? 2 : 0, fill, slot);
 }
-static void home_track_row(uint32_t c)
+static void home_track_row(uint32_t c, uint32_t pos)
 {
     track_t *t = &trk[c];
     const step_t *s = seq_steps(t);
-    uint32_t sel = c == song.sel, mute = t->p[P_MUTE] != 0, large = (ui_prefs & PREF_LARGE) != 0u, lit = (uint32_t)midi_lit(c);
+    uint32_t sel = c == song.sel && !burger_sample_row, mute = t->p[P_MUTE] != 0, large = (ui_prefs & PREF_LARGE) != 0u, lit = (uint32_t)midi_lit(c);
     uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), np = (len + 15u) / 16u, pg, p0, ph, i, sig, carry = 0;
-    int32_t y = Y_GRAPH + (int32_t)c * TR_PITCH, m, x, xr = 222, ch = large ? AF_M_CAP_H : AF_S_CAP_H;
+    int32_t y = Y_GRAPH + (int32_t)pos * TR_PITCH, m, x, xr = 222, ch = large ? AF_M_CAP_H : AF_S_CAP_H;
     uint16_t bg = sel ? T_THEME : T_SURF, half = ux_mix(T_THEME, T_INK, 35);
     uint16_t cn = sel ? (mute ? ux_mix(T_THEME, T_INK, 55) : T_INK) : mute ? T_DIM : T_THEME;   /* a note */
     uint16_t ca = sel || mute ? cn : T_ACCENT, cs = sel ? half : T_RAISE;   /* accented; a stub */
@@ -1827,7 +1835,7 @@ static void home_track_row(uint32_t c)
     if (m < ts.meter[c] - 1)
         m = ts.meter[c] - 1;                         /* (falls as the MIXER's) */
     sig = str_hash(1u + sel + mute * 2u + large * 4u + t->eng_req * 8u, b) + steps_hash(t) * 31u + pg * 7919u +
-          ph * 104729u + len * 1299709u + lit * 15485863u;   /* (1.5.5: MIDI IN lights the cushion) */
+          ph * 104729u + len * 1299709u + lit * 15485863u + pos * 179424673u;   /* (1.5.5: MIDI IN lights the cushion) */
     if (!ui.force && sig == ts.col[c]) {
         if (m != ts.meter[c]) {                      /* the meter alone: its slot */
             ts.meter[c] = (uint8_t)m;
@@ -1893,6 +1901,36 @@ static void home_track_row(uint32_t c)
     tr_meter(TR_MX, TR_MY, c, cs, sel ? T_INK : T_MID, bg);
     cv_blit(3, (uint32_t)y);
 }
+/* Burger Studio: the SAMPLE row under the tracks: the three user slots (lit: a sample in it), EDIT opens EDIT SAMPLE */
+static uint32_t ts_sample_sig;
+static void home_sample_row(uint32_t pos)
+{
+    uint32_t sel = burger_sample_row, large = (ui_prefs & PREF_LARGE) != 0u, k, sig;
+    int32_t y = Y_GRAPH + (int32_t)pos * TR_PITCH, x, ch = large ? AF_M_CAP_H : AF_S_CAP_H;
+    uint16_t bg = sel ? T_THEME : T_SURF;
+    sig = 0xB5u + sel * 2u + large * 4u + pos * 8u + (uint32_t)usr_nz[0] * 64u + (uint32_t)usr_nz[1] * 4096u +
+          (uint32_t)usr_nz[2] * 262144u + burger_slot_last * 16777216u;
+    if (!ui.force && sig == ts_sample_sig)
+        return;
+    ts_sample_sig = sig;
+    cv_begin(TR_W, TR_H, T_BG);
+    cv_rrect(0, 0, TR_W, TR_H, 5, bg, T_BG);
+    cv_icon_mid(4, TR_H / 2, 16, ICON_SAMPLE, sel ? T_INK : T_MID, bg);
+    cv_free_text(24, TR_NY(large) - (large ? AF_M_CAP_Y : AF_S_CAP_Y), large ? &AF_M : &AF_S, "SAMPLE",
+                 sel ? T_INK : T_TEXT, bg, 90);
+    if (!large)
+        cv_free_text(24, 16 - AF_S_CAP_Y, &AF_S, sel ? "EDIT: EDIT SAMPLE" : "USR1-3", sel ? T_INK : T_MID, bg, 110);
+    cv_text_on(148, (TR_H - AF_S_CAP_H) / 2 - AF_S_CAP_Y, &AF_S, "USR", sel ? T_INK : T_MID, bg);
+    for (k = 0; k < 3u; k++) {                       /* the three slots: a pill each, lit when it holds a sample */
+        static const char *const N[3] = {"1", "2", "3"};
+        uint16_t on = usr_nz[k] ? (sel ? T_INK : T_THEME) : (sel ? ux_mix(T_THEME, T_INK, 35) : T_RAISE);
+        x = 176 + (int32_t)k * 18;
+        cv_rrect(x, (TR_H - 15) / 2, 16, 15, 4, on, bg);
+        cv_text_on(x + 4, (TR_H - AF_S_CAP_H) / 2 - AF_S_CAP_Y, &AF_S, N[k], usr_nz[k] ? (sel ? T_THEME : T_INK) : T_DIM, on);
+        (void)ch;
+    }
+    cv_blit(3, (uint32_t)y);
+}
 static void draw_home_tracks(void)
 {
     uint32_t c;
@@ -1910,8 +1948,14 @@ static void draw_home_tracks(void)
             lcd_fill(3, ux.style ? y + 1u : y, TR_W, ux.style ? 1u : 2u, T_BG);
         }
     }
-    for (c = 0; c < NTRK; c++)
-        home_track_row(c);
+    if (burger_sample_row) {                         /* scrolled one row down: T2..T4, then SAMPLE */
+        for (c = 1; c < NTRK; c++)
+            home_track_row(c, c - 1u);
+        home_sample_row(NTRK - 1u);
+    } else {
+        for (c = 0; c < NTRK; c++)
+            home_track_row(c, c);
+    }
 }
 /* oscilloscope of the output, triggered on a rising zero crossing: a RAISE centre line, the trace 2 px (in silence
  * a flat line on it; MENU > SCREEN OFF keeps it from staying on the panel for hours) */

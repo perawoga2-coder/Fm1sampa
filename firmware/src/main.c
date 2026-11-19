@@ -110,6 +110,8 @@ static void fm1_main(void)
         ota_boot_cleanup();                             /* staging area left by an update */
 #endif
     settings_init();
+    if (ui_home_view == HV_SCOPE)                       /* Burger Studio: HOME is the rows of the tracks (and SAMPLE) */
+        ui_home_view = HV_TRACKS;
     usb_serial_apply();                                 /* (#67: the saved USB SERIAL before usb_start) */
     lcd_init();
     draw_splash();                                      /* ui_draw.c (1.1.5) */
