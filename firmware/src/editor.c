@@ -19,7 +19,7 @@ enum { ED_INFO = 1, ED_GET, ED_SET, ED_DUMP, ED_DESC, ED_STEP_GET, ED_STEP_SET, 
        ED_TRACK_PARAM, ED_TRACK_CHANGED, ED_SONG,
        ED_UI_STATE, ED_UI_SET, ED_UI_PALETTES, ED_FAV_GET, ED_FAV_SET,
        ED_MOTION = 64, ED_BACKUP_LIST, ED_BACKUP_GET, ED_BACKUP_PUT,                              /* v6: song chain */
-       ED_BURGER_SHOW = 112 };                       /* Burger Studio: a sample from the app, ready on a track */
+       ED_BURGER_SHOW = 112, ED_BURGER_EVENT, ED_BURGER_HELLO };   /* Burger Studio (web/EDITOR_PROTOCOL.md) */
 
 static uint8_t ed_out[664] __attribute__((section(".pool")));   /* (MOTION op 8: 128 records and their kinds, 653 bytes) */
 static uint32_t ed_n;
@@ -87,6 +87,30 @@ static void ed_smp_inval(uint32_t k)
 /* Burger Studio: the transport was playing when an upload began (it stops for the flash writes): BURGER_SHOW starts
  * it again, so the music goes on with the new sample */
 static uint8_t ed_was_playing;
+
+/* Burger Studio: REC on the SLICES page while the app is linked: a push to the app, BURGER_EVENT 1 (record a take,
+ * or stop the take that runs) with the slot the selected track plays (0..2; 127 none) and the track. The app records
+ * from its mic and sends the take back into that slot (BURGER_SHOW), so the tablet can stay in a pocket. */
+static void burger_app_rec(void)
+{
+    static uint8_t on;
+    uint32_t slot = 127u, k;
+    const param_desc_t *pd = param_desc_of(TSEL->eng_req % NENGINES, P_E0);
+    int32_t v = TSEL->p[P_E0];
+    if (pd->names && v >= 0 && v <= pd->max && pd->names[v])
+        for (k = 0; k < SMP_USER_SLOTS; k++) {
+            char want[5] = {'U', 'S', 'R', (char)('1' + k), 0};
+            if (str_eq(pd->names[v], want)) slot = k;
+        }
+    on = !on;
+    ed_begin(ED_BURGER_EVENT);
+    ed_b(1u);
+    ed_b(slot);
+    ed_b(song.sel);
+    ed_b(on);
+    ed_send();
+    ui_message(on ? "APP: REC" : "APP: STOP");
+}
 
 static int ed_smp_erase(uint32_t k, uint32_t all)  /* header sector, or the whole slot */
 {
@@ -648,6 +672,11 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
         ed_b(a[0]);
         ed_b((uint32_t)ed_smp_end(a[0], a + 1, na - 1u));
         break;
+    case ED_BURGER_HELLO:                                  /* Burger Studio's app: -> edition, version; links it */
+        burger_app_link = 1;
+        ed_str("BURGER " FELUCCA_VERSION, 24);
+        ed_b(1u);                                          /* (what it can: bit 0 SHOW, the REC event) */
+        break;
     case ED_BURGER_SHOW: {
         /* Burger Studio (app: Quick sample): slot, track, mode (0 SLICE, 1 SAMPLE), flags (bit 0: play it once,
          * bit 1: start the transport again if an upload stopped it) -> slot, rc (0 ok, 1 arguments, 2 the slot is
@@ -699,6 +728,7 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
                 if ((a[3] & 2u) && ed_was_playing && !song.playing)
                     transport_req = 1;
                 ed_was_playing = 0;
+                burger_app_link = 1;
                 ui.force = 1;
             }
         }

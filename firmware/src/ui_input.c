@@ -2,6 +2,10 @@
  * Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments */
 /* Felucca UI input: LEDs, knobs and buttons, SEQ step entry, panel setup. */
 #include "ui_name.c"                                    /* NAME: naming user presets and projects */
+
+/* Burger Studio: the app said hello (editor.c BURGER_HELLO / BURGER_SHOW): on the SLICES page REC asks it for a take */
+static uint8_t burger_app_link;
+static void burger_app_rec(void);                       /* (editor.c) */
 /* ----------------------------------------------------------- LEDs --- */
 /* The LED picture is built off-line and copied one byte per column: clearing
  * and relighting would let the 10 kHz scan catch the dark gap and flicker. */
@@ -1622,8 +1626,14 @@ static void ui_input(void)
             song.seq_mode = 0;
         }
     }
-    if (rec == BT_TAP && !ui.menu && !ui.confirm && !name_on())   /* REC pressed in another layer (REC alone: */
-        rec_tap();                                      /* its layer's tap); nothing in the menu, a dialog or NAME */
+    if (rec == BT_TAP && !ui.menu && !ui.confirm && !name_on()) {   /* REC pressed in another layer (REC alone: */
+#if FELUCCA_SLICE
+        if (burger_app_link && slice_page_on())         /* Burger Studio: on SLICES, REC = record a take in the app */
+            burger_app_rec();
+        else
+#endif
+            rec_tap();                                  /* its layer's tap); nothing in the menu, a dialog or NAME */
+    }
     if ((ui.menu || ui.confirm || name_on()) && ((pressed >> panel.btn[B_PLAY]) & 1u) &&
         (song.playing || chain_busy() || seq_counting()))
         transport_req = 2;                              /* PLAY stops a transport from the menu, a dialog, NAME (1.8;
