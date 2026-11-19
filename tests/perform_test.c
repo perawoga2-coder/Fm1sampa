@@ -1097,6 +1097,7 @@ static void sends_child(void)
     for (k = 0; k < NTRK; k++) {
         trk[k].p[P_REV] = (int16_t)(rev < 0 ? REVS[k] : rev);
         trk[k].p[P_DLY] = (int16_t)(dly < 0 ? DLYS[k] : dly);
+        trk[k].p[P_LEVEL] -= 8;                         /* (Burger Studio: the synth lift is +4 dB; the song's level as before) */
     }
     transport_req = 1;
     for (t = 0; t < frames; t += CTL) {
@@ -1274,7 +1275,7 @@ static int test_throw(void)
         tk->p[P_REV] = tk->p[P_DLY] = 0;
         for (i = 0; i < CTL; i++)
             b1[i] = 40000;
-        full = mulq15(((40000 >> 2) * LEVEL_Q12[tk->p[P_LEVEL] & 127]) >> 10, 32766);
+        full = mulq15(((40000 >> 2) * burger_lvl(tk)) >> 10, 32766);   /* (Burger Studio: the synth lift) */
         ok = 1;
         for (t = 0; t < 4096u; t += CTL) {
             if (t == 0)

@@ -85,6 +85,8 @@ static void fresh(uint32_t e, uint32_t pi)        /* the boot state (no FX tails
     host_tracks_init();
     for (k = 0; k < NPART; k++)
         host_preset(&trk[k], k ? 0u : e, k ? 0u : pi);
+    for (k = 0; k < NPART; k++)
+        trk[k].p[P_LEVEL] -= 8;                         /* (Burger Studio: the synth lift is +4 dB; the levels as before) */
     song.sel = 0;
     song.g[G_CLOCK] = 0;
     song.g[G_BPM] = 120;
