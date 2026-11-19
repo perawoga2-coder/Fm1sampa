@@ -135,7 +135,8 @@ static inline const smp_zone_t *smp_zone(uint32_t zi)
 }
 
 /* voice: ph[0] position (samples), ph[1] fraction Q16, s[0] predictor, s[1] step
- * index, s[2] previous sample, s[3] current sample, s[4] zone, s[5] step Q16 */
+ * index, s[2] previous sample, s[3] current sample, s[4] zone, s[5] the held sample (RATE),
+ * ph[2]: bits 0..7 RATE's hold count, bits 8..31 DROP's pitch offset (1/256 semitone, signed) */
 static inline int32_t sample_next(const smp_zone_t *z, voice_t *v, int loop)
 {
     uint32_t pos = v->ph[0], b = SMP_DATA[z->off + (pos >> 1)];
@@ -183,6 +184,8 @@ static void sample_note_on(track_t *t, voice_t *v)
     }
     v->ph[0] = 0;
     v->ph[1] = 0;
+    v->ph[2] = 0;                /* (Burger Studio: RATE's hold, DROP's pitch) */
+    v->s[5] = 0;
     v->s[0] = 0;
     v->s[1] = 0;
     v->s[2] = v->s[3] = 0;
@@ -197,7 +200,17 @@ static void sample_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
     const int16_t *p = t->p;
     const smp_zone_t *z = smp_zone((uint32_t)v->s[4]);
     uint32_t i, frac = v->ph[1];
-    int32_t d16 = clamp(m->pitch16 + p[P_E1] * 16 - z->root16, -1536, 576);   /* <= 3 octaves up: bounded decode load */
+    /* Burger Studio: DROP (E7) bends the pitch over the note, down (tape stop) or up (a riser), a block at a time
+     * (its offset in ph[2] >> 8, 1/256 semitone, at most 3 octaves); RATE (E5) holds each output sample for 1 .. 32 samples (the
+     * old samplers' grit, with BITS); both 0 = Felucca's SAMPLE as it was */
+    int32_t drop = (int32_t)v->ph[2] >> 8, hold = v->ph[2] & 0xFFu, rate = p[P_E5];
+    int32_t hn = rate ? 1 + (rate * rate) / 520 : 0;   /* 1 .. 32 samples */
+    if (p[P_E7]) {                                    /* (drop in 1/256 semitone: from ~5 to ~600 semitones a second) */
+        int32_t e7 = p[P_E7], inc = (e7 * (e7 < 0 ? -e7 : e7)) / 32 + (e7 > 0 ? 1 : -1);
+        drop = clamp(drop + inc, -36 * 256, 36 * 256);
+        v->ph[2] = (uint32_t)shl(drop, 8) | (uint32_t)hold;
+    }
+    int32_t d16 = clamp(m->pitch16 + p[P_E1] * 16 - z->root16 + (drop >> 4), -1536, 576);   /* <= 3 octaves up: bounded decode load */
     uint32_t r = pow2_q16(d16), stepq = (r >> 8) * (z->rate >> 8);   /* Q16 samples per output */
     int32_t bits = p[P_E2], lp = 4000 + ((clamp((p[P_E4] << 8) + m->cutoff, 0, 127 << 8) * 28767) >> 15);
     int32_t drv = p[P_E6], sh = bits / 10;
@@ -233,12 +246,21 @@ static void sample_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, cons
             s = (s >> sh) << sh;
         if (drv)
             s = softclip(s + (((s >> 2) * (drv * 150)) >> 11));   /* = s * drv * 600 / 32768, no overflow */
+        if (hn > 1) {                                 /* RATE: sample and hold */
+            if (hold == 0) {
+                v->s[5] = s;
+                hold = hn;
+            }
+            hold--;
+            s = v->s[5];
+        }
         v->s[7] += mulq15(s - v->s[7], lp);           /* gentle tone control (CUT) */
         out[i] += voice_amp(v->s[7], m, i) << 1;
         if (v->s[6])
             break;
     }
     v->ph[1] = frac;
+    v->ph[2] = (v->ph[2] & ~0xFFu) | ((uint32_t)hold & 0xFFu);
 }
 
 static const engine_t ENG_SAMPLE = {
@@ -250,9 +272,9 @@ static const engine_t ENG_SAMPLE = {
         {"BITS", F_INT, 0, 127, 0, 0, 0},
         {"LOOP", F_ENUM, 0, 1, 1, N_ONOFF_E, 0},
         {"CUT", F_INT, 0, 127, 127, 0, 0},
-        {"-", F_INT, 0, 0, 0, 0, 0},
+        {"RATE", F_INT, 0, 127, 0, 0, 0},                /* Burger Studio: sample-rate grit (0 = clean) */
         {"DRV", F_PCT, 0, 127, 0, 0, 0},
-        {"-", F_INT, 0, 0, 0, 0, 0},
+        {"DROP", F_INT, -64, 63, 0, 0, 0},               /* Burger Studio: pitch falls (-) / rises (+) over the note */
     },
     .presets = SMP_PRESET_TABLE,
     .npresets = SMP_NPRESETS,
