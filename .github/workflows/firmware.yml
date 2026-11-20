@@ -69,7 +69,7 @@ jobs:
           name: burger-fm1-${{ steps.v.outputs.ver }}
           path: build/release-${{ steps.v.outputs.ver }}/
 
-      - name: Pre-release
+      - name: Release (the newest firmware, marked latest: The Firmware Hub reads it)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -78,7 +78,7 @@ jobs:
           D="build/release-$V"
           gh release delete "$T" -y --cleanup-tag 2>/dev/null || true
           (cd "$D" && zip -qr LICENSES.zip LICENSES && rm -rf LICENSES)
-          gh release create "$T" "$D"/* --prerelease --target "$GITHUB_SHA" \
+          gh release create "$T" "$D"/* --latest --target "$GITHUB_SHA" \
             --title "Burger Studio FM-1 firmware $V" \
             --notes "Burger Studio firmware for the M-VAVE FM-1, built on Felucca 1.8.2 (GPL-3.0-only). Untested on hardware: back up your FM-1 first. Install: python3 tools/fm1_install.py felucca-$V.fwsc"
 
