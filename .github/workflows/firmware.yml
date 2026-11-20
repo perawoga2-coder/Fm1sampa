@@ -69,7 +69,7 @@ jobs:
           name: burger-fm1-${{ steps.v.outputs.ver }}
           path: build/release-${{ steps.v.outputs.ver }}/
 
-      - name: Release (the newest firmware, marked latest: The Firmware Hub reads it)
+      - name: Release (marked latest, for The Firmware Hub)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
