@@ -62,6 +62,7 @@
   .card a:hover { background: var(--orange2); }
   .card span.soon { background: #d9cfc0; color: #6b5f50; }
   .card a:focus-visible, .pixbtn:focus-visible { outline: 3px solid var(--pink); outline-offset: 6px; }
+  .beta { display: inline-block; font-size: 9px; color: var(--paper); background: var(--pink); padding: 4px 5px 3px; margin-left: 4px; vertical-align: middle; box-shadow: 0 2px 0 var(--ink); }
   .note { font-size: 12px; color: #6b5f50; text-align: center; min-height: 1em; }
   .bar { position: fixed; top: 12px; right: 12px; z-index: 2; display: flex; gap: 12px; }
   .bar .pixbtn { font-size: 10px; padding: 8px 10px; background: var(--paper); }
@@ -101,10 +102,10 @@
     <section class="cards after">
       <article class="card">
         <canvas id="i0" width="24" height="24" aria-hidden="true"></canvas>
-        <h2>BURGER STUDIO</h2>
-        <p data-th="แอปทำเพลงบนแท็บเล็ต Android: อัดเสียง 5 แทร็ก, MPC, กลอง, เบส, ซินธ์, กีตาร์" data-en="A music app for Android tablets: 5 sampling tracks, MPC, drums, bass, synth, guitars."></p>
-        <a id="apk" href="https://github.com/perawoga2-coder/fm1burger/releases" data-th="ดาวน์โหลด APK" data-en="DOWNLOAD APK"></a>
-        <div class="note" id="apkv"></div>
+        <h2>BURGER STUDIO <span class="beta">BETA</span></h2>
+        <p data-th="แอปทำเพลงบนแท็บเล็ต Android: แซมเปิล 4 แทร็ก, แพดกลอง 32 ช่อง, เบส, ซินธ์, กีตาร์ และส่งเสียงเข้า FM-1" data-en="A music app for Android tablets: 4 sampler tracks, 32 drum pads, bass, synth, guitars, and samples into the FM-1."></p>
+        <a id="apk" href="https://github.com/perawoga2-coder/fm1burger/releases/download/v3.7-lab/burgerstudio-lab-v3.7-debug.apk" data-th="ดาวน์โหลดตัว BETA" data-en="DOWNLOAD BETA"></a>
+        <div class="note" id="apkv" data-th="เวอร์ชัน 3.7 · Beta ตัวทดลอง" data-en="Version 3.7 · Beta"></div>
       </article>
       <article class="card">
         <canvas id="i1" width="24" height="24" aria-hidden="true"></canvas>
@@ -273,28 +274,10 @@ function paintLang() {
   document.querySelectorAll("[data-th]").forEach(el => { el.textContent = el.dataset[lang] || el.dataset.th; });
   $("lang").textContent = lang === "th" ? "EN" : "ไทย";
 }
-$("lang").onclick = () => { lang = lang === "th" ? "en" : "th"; store.set("mh.lang", lang); paintLang(); latestApk(); };
-
-/* ---------- the newest APK (the releases are early builds: GitHub's "latest" skips them) ---------- */
-function latestApk() {
-  fetch("https://api.github.com/repos/perawoga2-coder/fm1burger/releases?per_page=5")
-    .then(r => r.ok ? r.json() : Promise.reject(r.status))
-    .then(list => {
-      for (const rel of list) {
-        const a = (rel.assets || []).find(x => /\.apk$/i.test(x.name));
-        if (a) {
-          $("apk").href = a.browser_download_url;
-          $("apkv").textContent = (lang === "th" ? "เวอร์ชัน " : "Version ") + rel.tag_name.replace(/^v/, "") + (rel.prerelease ? (lang === "th" ? " (ทดลอง)" : " (early build)") : "");
-          return;
-        }
-      }
-    })
-    .catch(() => {});
-}
+$("lang").onclick = () => { lang = lang === "th" ? "en" : "th"; store.set("mh.lang", lang); paintLang(); };
 
 paintLang();
 paintSoundBtns();
-latestApk();
 if (window.__videoMode) {
   /* (tools/render_intro: draws frames on demand) */
 } else if (store.get("mh.seen") === "1" || reduce) {
