@@ -1,0 +1,16 @@
+# The Firmware Hub's shared build: on a version tag (v*) GitHub builds the firmware from this source, signs the .fwsc
+# and makes the release (the hub's "Built from source on GitHub" key). Release: git tag v1.8.2-bs10 && git push origin v1.8.2-bs10
+name: release
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  build:
+    uses: zvenson/fm1-build/.github/workflows/build.yml@v1
+    permissions:
+      contents: write        # the release
+      id-token: write        # the signing certificate
+      attestations: write    # the attestation
+    with:
+      build: pip install -q Pillow fonttools && ./build.sh --release "${GITHUB_REF_NAME#v}"
+      packages: build/*.fwsc

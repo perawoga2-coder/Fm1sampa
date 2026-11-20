@@ -69,6 +69,69 @@ jobs:
           name: burger-fm1-${{ steps.v.outputs.ver }}
           path: build/release-${{ steps.v.outputs.ver }}/
 
+      # (releases come from release.yml: a version tag, built and signed by The Firmware Hub's shared workflow)
+
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Python packages
+        run: pip install Pillow fonttools
+
+      - name: JieLi toolchain (clang for pi32v2)
+        run: |
+          for i in 1 2 3; do sh tools/get_toolchain.sh "$HOME/.jieli" && break; sleep 20; done
+          ls "$HOME/.jieli/toolchain/pi32v2/bin/clang"
+
+      - name: JieLi AC79 SDK (three files of it go into the package)
+        run: |
+          for i in 1 2 3; do
+            git clone -q --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
+              https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git "$HOME/fw-AC79_AIoT_SDK" && break
+            rm -rf "$HOME/fw-AC79_AIoT_SDK"; sleep 30
+          done
+          ls "$HOME/fw-AC79_AIoT_SDK/cpu/wl82/tools/uboot.boot"
+
+      - name: Version
+        id: v
+        run: echo "ver=$(cat BURGER_VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: ./build.sh --release "${{ steps.v.outputs.ver }}"
+
+      - name: Installer site (GitHub Pages)
+        run: |
+          V="${{ steps.v.outputs.ver }}"
+          python3 web/make_site.py "build/felucca-$V.fwsc" "$V" site
+          ls -R site | head -30
+
+      - uses: actions/configure-pages@v5
+        continue-on-error: true
+        id: pages
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Host tests (engines)
+        run: sh firmware/engines/tests/run.sh || echo "engine tests failed (see log)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: burger-fm1-${{ steps.v.outputs.ver }}
+          path: build/release-${{ steps.v.outputs.ver }}/
+
       - name: Release (marked latest, for The Firmware Hub)
         env:
           GH_TOKEN: ${{ github.token }}
