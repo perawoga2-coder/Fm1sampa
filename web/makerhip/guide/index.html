@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sampling Guide</title>
+<meta name="description" content="Load your own samples into the M-VAVE FM-1 with the Burger Studio FM-1 firmware, step by step.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Kanit:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #1b1238; --bg2: #2b1a4f; --ink: #1a1020; --paper: #fff6e0; --orange: #ff7a2f; --orange2: #ffb070; --sun: #ffd86b; --teal: #2dd4bf; --dim: #c9bfd0; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #1b1238; } }
+  :root[data-theme="light"] { --bg: #1b1238; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--paper); }
+  body { font-family: "Kanit", system-ui, sans-serif; overflow-x: hidden;
+         background: linear-gradient(180deg, #1b1238 0, #2b1a4f 180px, #47276a 300px, #1b1238 520px) no-repeat, var(--bg); }
+  a { color: inherit; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 16px 80px; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .home { font-family: "Press Start 2P", monospace; font-size: 18px; color: var(--orange); text-decoration: none; text-shadow: 3px 3px 0 var(--ink); }
+  .pix { font-family: "Press Start 2P", monospace; font-size: 11px; text-decoration: none; color: var(--ink); background: var(--paper);
+         padding: 10px 12px; display: inline-block;
+         box-shadow: 0 4px 0 var(--ink), 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 -4px 0 var(--ink); }
+  .pix.orange { background: var(--orange); } .pix.teal { background: var(--teal); }
+  .pix:hover { filter: brightness(1.08); } .pix:focus-visible, .chips a:focus-visible { outline: 3px solid #ff5ca8; outline-offset: 6px; }
+  h1 { font-family: "Press Start 2P", monospace; font-size: clamp(18px, 4vw, 30px); line-height: 1.4; margin: 36px 0 10px; text-shadow: 3px 3px 0 var(--ink); }
+  .lead { font-size: 18px; color: var(--dim); max-width: 760px; margin: 0 0 22px; }
+  .actions { display: flex; gap: 18px; flex-wrap: wrap; margin: 8px 0 30px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 28px; position: sticky; top: 0; z-index: 2; padding: 10px 0; background: var(--bg); }
+  .chips a { font-family: "Press Start 2P", monospace; font-size: 10px; text-decoration: none; color: var(--paper); border: 3px solid var(--paper);
+             padding: 8px 9px; white-space: nowrap; }
+  .chips a:hover { background: var(--paper); color: var(--ink); }
+  .pages { display: grid; grid-template-columns: repeat(2, 1fr); gap: 34px 28px; }
+  figure { margin: 0; scroll-margin-top: 70px; }
+  figure img { width: 100%; height: auto; aspect-ratio: 1080 / 1350; display: block; background: #26203a;
+               box-shadow: 0 8px 0 var(--ink), 8px 0 0 var(--ink), -8px 0 0 var(--ink), 0 -8px 0 var(--ink), 10px 14px 0 4px rgba(0,0,0,.35); }
+  figcaption { font-size: 15px; color: var(--dim); margin-top: 18px; }
+  figcaption b { color: var(--sun); font-weight: 600; }
+  .end { margin-top: 46px; padding: 22px 20px; background: var(--paper); color: var(--ink);
+         box-shadow: 0 6px 0 var(--ink), 6px 0 0 var(--ink), -6px 0 0 var(--ink), 0 -6px 0 var(--ink); }
+  .end h2 { font-family: "Press Start 2P", monospace; font-size: 14px; margin: 0 0 12px; }
+  .end p { margin: 0 0 16px; }
+  footer { text-align: center; font-size: 12px; color: var(--dim); margin-top: 40px; }
+  @media (max-width: 760px) { .pages { grid-template-columns: 1fr; } .lead { font-size: 16px; }
+    .chips { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="home" href="../">MAKER HIP</a>
+    <a class="pix" href="../">◀ BACK</a>
+  </div>
+
+  <h1>SAMPLING GUIDE</h1>
+  <p class="lead">Load your own samples into the M-VAVE FM-1 with the Burger Studio FM-1 firmware: from the app to the FM-1's own screen, in seven steps.</p>
+  <div class="actions">
+    <a class="pix orange" href="../guide.pdf" download>DOWNLOAD PDF</a>
+    <a class="pix teal" href="https://thefirmwarehub.com/?q=Burger" rel="noopener">GET THE FIRMWARE</a>
+  </div>
+
+  <nav class="chips" aria-label="Steps">
+    <a href="#p0">START</a><a href="#p1">1 PLUG IN</a><a href="#p2">2 PICK</a><a href="#p3">3 SEND</a>
+    <a href="#p4">4 FIND</a><a href="#p5">5 TRIM</a><a href="#p6">6 PLAY</a><a href="#p7">7 TIPS</a>
+  </nav>
+
+  <section class="pages">
+    <figure id="p0"><img src="page0.webp" width="1080" height="1350" alt="Cover: load your own samples into the M-VAVE FM-1. You need an FM-1 with the Burger Studio FM-1 firmware, an Android tablet with the Burger Studio app, a USB-C cable and a sound.">
+      <figcaption><b>What you need.</b> The firmware, the app, one USB-C cable.</figcaption></figure>
+    <figure id="p1"><img src="page1.webp" width="1080" height="1350" loading="lazy" alt="Step 1: plug the tablet into the FM-1. The app connects by itself and says the FM-1 takes samples.">
+      <figcaption><b>1 · Plug it in.</b> The app finds the FM-1 by itself.</figcaption></figure>
+    <figure id="p2"><img src="page2.webp" width="1080" height="1350" loading="lazy" alt="Step 2: in the app, Sampler, Maker Bank, tap a sound's name, then Devices and Send into the sample slots.">
+      <figcaption><b>2 · Pick the sound.</b> Maker Bank, a name, Devices… → Send.</figcaption></figure>
+    <figure id="p3"><img src="page3.webp" width="1080" height="1350" loading="lazy" alt="Step 3: choose quality, slots and loudness, then a slot USR1 to USR3. A table shows how long a sound fits: 7 to 84 seconds.">
+      <figcaption><b>3 · Choose how it goes in.</b> HI, LONG or LO-FI; one to three slots.</figcaption></figure>
+    <figure id="p4"><img src="page4.webp" width="1080" height="1350" loading="lazy" alt="Step 4: on the FM-1's HOME screen, turn ALGO down past track 4 to the SAMPLE row with USR 1 2 3.">
+      <figcaption><b>4 · Find it on the FM-1.</b> HOME, turn ALGO down to SAMPLE.</figcaption></figure>
+    <figure id="p5"><img src="page5.webp" width="1080" height="1350" loading="lazy" alt="Step 5: press EDIT on the SAMPLE row to open EDIT SAMPLE. KNOB 1 picks a marker, KNOB 2 moves it, OCT plus splits or joins slices.">
+      <figcaption><b>5 · Trim and slice it.</b> EDIT, then KNOB 1 and KNOB 2.</figcaption></figure>
+    <figure id="p6"><img src="page6.webp" width="1080" height="1350" loading="lazy" alt="Step 6: on a track's EDIT page turn KNOB 1, SET or SRC, to USR1 so the track plays your sample.">
+      <figcaption><b>6 · Play it on a track.</b> SET or SRC = USR1.</figcaption></figure>
+    <figure id="p7"><img src="page7.webp" width="1080" height="1350" loading="lazy" alt="Step 7: MIXER page, KNOB 1 LEVEL for volume; CLOCK page, KNOB 3 CLK to INT when the FM-1 is unplugged.">
+      <figcaption><b>7 · Level and tips.</b> MIXER for volume, CLK = INT when unplugged.</figcaption></figure>
+  </section>
+
+  <div class="end">
+    <h2>READY?</h2>
+    <p>Install the firmware in one click from The Firmware Hub, or with our own installer in Chrome. Back up your FM-1 first: it is a beta.</p>
+    <div class="actions" style="margin:0">
+      <a class="pix orange" href="https://thefirmwarehub.com/?q=Burger" rel="noopener">THE FIRMWARE HUB</a>
+      <a class="pix" href="../../webapp/installer/">OUR INSTALLER</a>
+      <a class="pix" href="../">BURGER STUDIO APP</a>
+    </div>
+  </div>
+  <footer>© Maker Hip by Hippie Maker · FM-1 firmware built on Felucca (GPL-3.0) · not affiliated with M-VAVE</footer>
+</div>
+</body>
+</html>
