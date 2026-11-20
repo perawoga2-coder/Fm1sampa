@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maker Hip</title>
+<meta name="description" content="Maker Hip by Hippie Maker: Burger Studio, the FM-1 firmware and sound banks.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Kanit:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1b1238; --ink: #1a1020; --paper: #fff6e0; --orange: #ff7a2f; --orange2: #ffb070;
+    --sun: #ffd86b; --sea: #1d3f7a; --pink: #ff5ca8; --text: #fff6e0; --dim: #e8cfe0;
+  }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #1b1238; } }
+  :root[data-theme="light"] { --bg: #1b1238; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); }
+  body { font-family: "Kanit", system-ui, sans-serif; overflow-x: hidden; }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+
+  /* page 1: the intro, the whole screen */
+  #intro { position: fixed; inset: 0; background: #000; display: flex; align-items: center; justify-content: center; z-index: 10; }
+  #intro canvas { width: min(100vw, calc(100vh * 16 / 9)); height: auto; aspect-ratio: 16 / 9; }
+  .pixbtn {
+    font-family: "Press Start 2P", monospace; font-size: 12px; letter-spacing: 1px;
+    color: var(--ink); background: var(--sun); border: 0; padding: 12px 14px; cursor: pointer;
+    box-shadow: 0 4px 0 var(--ink), 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 -4px 0 var(--ink);
+  }
+  .pixbtn:active { transform: translateY(2px); }
+  #skip { position: fixed; right: 20px; bottom: 20px; z-index: 11; }
+  #sound { position: fixed; left: 20px; bottom: 20px; z-index: 11; background: var(--paper); }
+  #start { position: fixed; inset: 0; z-index: 9; background: transparent; border: 0; cursor: pointer; }
+
+  /* page 2: the island behind, the company and its products in front */
+  #main { display: none; min-height: 100vh; position: relative; }
+  #bg { position: fixed; inset: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: 0; }
+  #bg canvas { width: 100%; height: 100%; object-fit: cover; }
+  .wrap { position: relative; z-index: 1; max-width: 980px; margin: 0 auto; padding: 28px 16px 120px; }
+  header { text-align: center; margin: 4vh 0 22px; }
+  #logo { width: min(528px, 92vw); height: auto; }
+  .by { font-family: "Press Start 2P", monospace; font-size: 12px; color: var(--paper); text-shadow: 2px 2px 0 var(--ink); margin-top: 6px; }
+  .tag { margin: 12px auto 0; max-width: 560px; color: var(--paper); text-shadow: 1px 1px 0 var(--ink); font-size: 16px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 52vh; }
+  .down { text-align: center; font-family: "Press Start 2P", monospace; color: var(--sun); text-shadow: 2px 2px 0 var(--ink); margin-top: 40vh; animation: bob 1.2s steps(2) infinite; }
+  @keyframes bob { 50% { transform: translateY(6px); } }
+  .cards.after { margin-top: 10vh; }
+  :lang(th) .card a, :lang(th) .card span.soon { font-family: "Kanit", sans-serif; font-size: 17px; font-weight: 600; padding: 9px 8px; }
+  .card {
+    background: var(--paper); color: var(--ink); padding: 18px 16px 16px; display: flex; flex-direction: column; gap: 10px;
+    box-shadow: 0 6px 0 var(--ink), 6px 0 0 var(--ink), -6px 0 0 var(--ink), 0 -6px 0 var(--ink), 6px 6px 0 6px rgba(0,0,0,.35);
+  }
+  .card canvas { width: 96px; height: 96px; align-self: center; }
+  .card h2 { font-family: "Press Start 2P", monospace; font-size: 13px; line-height: 1.5; margin: 4px 0 0; text-align: center; }
+  .card p { margin: 0; font-size: 15px; line-height: 1.45; flex: 1; text-align: center; }
+  .card a, .card span.soon {
+    font-family: "Press Start 2P", monospace; font-size: 11px; text-align: center; text-decoration: none;
+    color: var(--ink); background: var(--orange); padding: 12px 8px; margin: 6px 4px 2px;
+    box-shadow: 0 4px 0 var(--ink), 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 -4px 0 var(--ink);
+  }
+  .card a:hover { background: var(--orange2); }
+  .card span.soon { background: #d9cfc0; color: #6b5f50; }
+  .card a:focus-visible, .pixbtn:focus-visible { outline: 3px solid var(--pink); outline-offset: 6px; }
+  .note { font-size: 12px; color: #6b5f50; text-align: center; min-height: 1em; }
+  .bar { position: fixed; top: 12px; right: 12px; z-index: 2; display: flex; gap: 12px; }
+  .bar .pixbtn { font-size: 10px; padding: 8px 10px; background: var(--paper); }
+  footer { position: relative; z-index: 1; text-align: center; font-size: 12px; color: var(--paper); text-shadow: 1px 1px 0 var(--ink); padding: 0 16px 24px; }
+  @media (max-width: 760px) {
+    .cards { grid-template-columns: 1fr; gap: 26px; }
+    .down { margin-top: 44vh; }
+    .wrap { padding-top: 56px; }
+    #skip { right: 16px; bottom: 16px; } #sound { left: 16px; bottom: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .down { animation: none; } }
+</style>
+</head>
+<body>
+
+<div id="intro" aria-label="Maker Hip intro">
+  <canvas id="ic" width="320" height="180"></canvas>
+  <button id="start" aria-label="Start"></button>
+  <button id="sound" class="pixbtn" type="button">♪ SOUND</button>
+  <button id="skip" class="pixbtn" type="button">SKIP ▶</button>
+</div>
+
+<div id="main">
+  <div id="bg"><canvas id="bc" width="320" height="180"></canvas></div>
+  <div class="bar">
+    <button id="lang" class="pixbtn" type="button">EN</button>
+    <button id="again" class="pixbtn" type="button">▶ INTRO</button>
+    <button id="mute" class="pixbtn" type="button">♪</button>
+  </div>
+  <div class="wrap">
+    <header>
+      <canvas id="logo" width="176" height="36" aria-label="MAKER HIP"></canvas>
+      <div class="by">by Hippie Maker</div>
+      <div class="tag" data-th="เครื่องมือทำเพลงจากเกาะเล็ก ๆ: แซมเปิลอะไรก็ได้ แล้วเล่นมันให้โลกได้ยิน" data-en="Music tools from a tiny island: sample anything, then play it to the world."></div>
+    </header>
+    <div class="down" aria-hidden="true">▼</div>
+    <section class="cards after">
+      <article class="card">
+        <canvas id="i0" width="24" height="24" aria-hidden="true"></canvas>
+        <h2>BURGER STUDIO</h2>
+        <p data-th="แอปทำเพลงบนแท็บเล็ต Android: อัดเสียง 5 แทร็ก, MPC, กลอง, เบส, ซินธ์, กีตาร์" data-en="A music app for Android tablets: 5 sampling tracks, MPC, drums, bass, synth, guitars."></p>
+        <a id="apk" href="https://github.com/perawoga2-coder/fm1burger/releases" data-th="ดาวน์โหลด APK" data-en="DOWNLOAD APK"></a>
+        <div class="note" id="apkv"></div>
+      </article>
+      <article class="card">
+        <canvas id="i1" width="24" height="24" aria-hidden="true"></canvas>
+        <h2>FM-1 FIRMWARE</h2>
+        <p data-th="เฟิร์มแวร์สำหรับ M-VAVE FM-1 เน้นแซมเปิล ติดตั้งผ่าน Chrome ด้วยสาย USB-C" data-en="Firmware for the M-VAVE FM-1, sampling first. Installs from Chrome over USB-C."></p>
+        <a href="../webapp/installer/" data-th="ติดตั้งเฟิร์มแวร์" data-en="INSTALL FIRMWARE"></a>
+        <div class="note" data-th="สำรองข้อมูลเครื่องก่อนติดตั้ง" data-en="Back up your FM-1 first"></div>
+      </article>
+      <article class="card">
+        <canvas id="i2" width="24" height="24" aria-hidden="true"></canvas>
+        <h2>SOUND BANK</h2>
+        <p data-th="ชุดเสียงสำหรับ Burger Studio และ FM-1 ชุดใหม่ทุก 2 เดือน" data-en="Sound packs for Burger Studio and the FM-1, a new one every two months."></p>
+        <span class="soon" data-th="เร็ว ๆ นี้" data-en="COMING SOON"></span>
+        <div class="note"></div>
+      </article>
+    </section>
+  </div>
+  <footer>© Maker Hip by Hippie Maker · FM-1 firmware: built on Felucca (GPL-3.0)</footer>
+</div>
+
+<script src="scene.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+};
+const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- sound (only after a tap: browsers keep pages silent until then) ---------- */
+let actx = null, master = null, soundOn = store.get("mh.sound") === "1", schedUntil = 0, schedBase = 0, schedMode = "";
+function audio() {
+  if (!actx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    actx = new AC(); master = actx.createGain(); master.gain.value = 0.6; master.connect(actx.destination);
+  }
+  if (actx.state === "suspended") actx.resume();
+  return actx;
+}
+function soundStart(mode, nowT) {
+  if (!soundOn || !audio()) return;
+  schedMode = mode; schedBase = actx.currentTime + 0.05 - nowT; schedUntil = nowT;
+}
+function soundStop() {
+  if (master) { master.disconnect(); master = actx.createGain(); master.gain.value = 0.6; master.connect(actx.destination); }
+  schedMode = "";
+}
+function soundPump(nowT) {
+  if (!schedMode || !actx) return;
+  const ahead = nowT + 0.4;
+  if (ahead > schedUntil) {
+    (schedMode === "intro" ? scheduleIntro : scheduleLoop)(actx, master, schedBase, schedUntil, ahead);
+    schedUntil = ahead;
+  }
+}
+
+/* ---------- page 1: the intro ---------- */
+const ic = $("ic").getContext("2d");
+let t0 = 0, running = false, done = false;
+function introFrame(ts) {
+  if (!running) return;
+  const t = (ts - t0) / 1000;
+  setCtx(ic);
+  drawIntro(Math.min(t, INTRO_END));
+  soundPump(t);
+  if (t >= INTRO_END + 1.5) return toMain();
+  requestAnimationFrame(introFrame);
+}
+function playIntro() {
+  $("main").style.display = "none";
+  $("intro").style.display = "flex";
+  done = false; running = true; soundStop();
+  t0 = performance.now();
+  soundStart("intro", 0);
+  requestAnimationFrame(introFrame);
+}
+function toMain() {
+  if (done) return;
+  done = true; running = false;
+  store.set("mh.seen", "1");
+  soundStop();
+  $("intro").style.display = "none";
+  $("main").style.display = "block";
+  startMain();
+}
+$("skip").onclick = toMain;
+$("start").onclick = () => { if ((performance.now() - t0) / 1000 > 19.5) toMain(); };
+document.addEventListener("keydown", e => {
+  if ($("intro").style.display !== "none" && (e.key === "Enter" || e.key === " " || e.key === "Escape")) { e.preventDefault(); toMain(); }
+});
+function paintSoundBtns() {
+  $("sound").textContent = soundOn ? "♪ ON" : "♪ SOUND";
+  $("mute").textContent = soundOn ? "♪ ON" : "♪ OFF";
+  $("mute").setAttribute("aria-label", soundOn ? "Sound off" : "Sound on");
+}
+$("sound").onclick = () => {
+  soundOn = !soundOn; store.set("mh.sound", soundOn ? "1" : "0"); paintSoundBtns();
+  if (soundOn) soundStart("intro", (performance.now() - t0) / 1000); else soundStop();
+};
+
+/* ---------- page 2: the island playing, the products ---------- */
+const bc = $("bc").getContext("2d");
+let mainT0 = 0, mainOn = false;
+function mainFrame(ts) {
+  if (!mainOn) return;
+  const t = (ts - mainT0) / 1000;
+  setCtx(bc);
+  drawLoop(reduce ? 0 : t);
+  icons(reduce ? 0 : t);
+  soundPump(t);
+  requestAnimationFrame(mainFrame);
+}
+function startMain() {
+  mainOn = true; mainT0 = performance.now();
+  logo();
+  soundStart("loop", 0);
+  requestAnimationFrame(mainFrame);
+}
+$("again").onclick = () => { mainOn = false; playIntro(); };
+$("mute").onclick = () => {
+  soundOn = !soundOn; store.set("mh.sound", soundOn ? "1" : "0"); paintSoundBtns();
+  if (soundOn) soundStart("loop", (performance.now() - mainT0) / 1000); else soundStop();
+};
+
+function logo() {
+  const c = $("logo").getContext("2d");
+  setCtx(c);
+  c.clearRect(0, 0, 176, 36);
+  const s = 3, w = textW("MAKER HIP", s);
+  text("MAKER HIP", Math.floor((176 - w - s) / 2), 4, s, P.orange, P.ink);
+}
+
+/* the three pixel icons, bobbing: a burger, the FM-1, a sound bank (a record) */
+function icons(t) {
+  for (let k = 0; k < 3; k++) {
+    const c = $("i" + k).getContext("2d");
+    setCtx(c);
+    c.clearRect(0, 0, 24, 24);
+    const b = Math.round(Math.sin(t * 3 + k) * 1);
+    if (k === 0) {
+      R(4, 5 + b, 16, 4, "#e09a3c"); R(5, 4 + b, 14, 1, "#e09a3c"); px(8, 6 + b, "#fff1a8"); px(13, 6 + b, "#fff1a8"); px(16, 7 + b, "#fff1a8");
+      R(3, 10 + b, 18, 2, "#62c35b"); R(3, 12 + b, 18, 3, "#8a3a2a"); R(3, 15 + b, 18, 1, "#ffcc33"); R(4, 16 + b, 16, 3, "#e09a3c");
+    } else if (k === 1) {
+      R(3, 6 + b, 18, 13, "#4b5263"); R(4, 7 + b, 8, 7, "#1a1020");
+      const on = Math.floor(t * 4) % 2;
+      R(5, 8 + b, 6, 1, "#3ad86a"); R(5, 10 + b, on ? 5 : 3, 1, "#3ad86a"); R(5, 12 + b, 4, 1, "#3ad86a");
+      for (let j = 0; j < 4; j++) R(13 + (j % 2) * 4, 8 + Math.floor(j / 2) * 4 + b, 3, 3, j === Math.floor(t * 2) % 4 ? "#ff7a2f" : "#c0c7d6");
+      for (let j = 0; j < 8; j++) R(4 + j * 2, 16 + b, 1, 2, j % 2 ? "#fff6e0" : "#1a1020");
+    } else {
+      const a = t * 2;
+      for (let y = -8; y <= 8; y++) for (let x = -8; x <= 8; x++) {
+        const r = Math.sqrt(x * x + y * y);
+        if (r <= 8.5) px(12 + x, 12 + y + b, r < 2 ? "#ff5ca8" : r < 3.2 ? "#ffd86b" : (Math.floor(Math.atan2(y, x) * 2 + a) % 2 ? "#1a1020" : "#3a2a40"));
+      }
+      R(11, 11 + b, 2, 2, "#fff6e0");
+    }
+  }
+}
+
+/* ---------- words: Thai first, English on a tap ---------- */
+let lang = store.get("mh.lang") || "th";
+function paintLang() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-th]").forEach(el => { el.textContent = el.dataset[lang] || el.dataset.th; });
+  $("lang").textContent = lang === "th" ? "EN" : "ไทย";
+}
+$("lang").onclick = () => { lang = lang === "th" ? "en" : "th"; store.set("mh.lang", lang); paintLang(); latestApk(); };
+
+/* ---------- the newest APK (the releases are early builds: GitHub's "latest" skips them) ---------- */
+function latestApk() {
+  fetch("https://api.github.com/repos/perawoga2-coder/fm1burger/releases?per_page=5")
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(list => {
+      for (const rel of list) {
+        const a = (rel.assets || []).find(x => /\.apk$/i.test(x.name));
+        if (a) {
+          $("apk").href = a.browser_download_url;
+          $("apkv").textContent = (lang === "th" ? "เวอร์ชัน " : "Version ") + rel.tag_name.replace(/^v/, "") + (rel.prerelease ? (lang === "th" ? " (ทดลอง)" : " (early build)") : "");
+          return;
+        }
+      }
+    })
+    .catch(() => {});
+}
+
+paintLang();
+paintSoundBtns();
+latestApk();
+if (window.__videoMode) {
+  /* (tools/render_intro: draws frames on demand) */
+} else if (store.get("mh.seen") === "1" || reduce) {
+  $("intro").style.display = "none"; done = true; $("main").style.display = "block"; startMain();
+} else {
+  playIntro();
+}
+
+/* for the video: draw intro time t, and make the sound offline */
+window.__frame = t => { setCtx(ic); drawIntro(t); return $("ic").toDataURL("image/png"); };
+window.__audio = async () => {
+  const sr = 44100, off = new OfflineAudioContext(2, Math.ceil(sr * (INTRO_END + 1.5)), sr);
+  const g = off.createGain(); g.gain.value = 0.6; g.connect(off.destination);
+  scheduleIntro(off, g, 0.0, 0, INTRO_END);
+  const buf = await off.startRendering();
+  const L = buf.getChannelData(0), Rr = buf.getChannelData(1), out = new Int16Array(L.length * 2);
+  for (let i = 0; i < L.length; i++) { out[2 * i] = Math.max(-1, Math.min(1, L[i])) * 32767; out[2 * i + 1] = Math.max(-1, Math.min(1, Rr[i])) * 32767; }
+  let s = ""; const u8 = new Uint8Array(out.buffer);
+  for (let i = 0; i < u8.length; i += 32768) s += String.fromCharCode.apply(null, u8.subarray(i, i + 32768));
+  return btoa(s);
+};
+</script>
+</body>
+</html>

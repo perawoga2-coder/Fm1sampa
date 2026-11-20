@@ -78,6 +78,9 @@ def main(pkg, version, out):
     for f in ("fukiai.ttf", "FUKIAI-LICENSE.txt", "fm1backup.js"):
         if (HERE / f).exists():
             shutil.copy(HERE / f, ed / f)
+    mh = HERE / "makerhip"                          # Burger Studio: the company's site (Maker Hip), at makerhip/
+    if mh.is_dir():
+        shutil.copytree(mh, out / "makerhip", dirs_exist_ok=True)
     (out / "index.html").write_text(
         '<!doctype html><meta charset="utf-8"><title>Burger Studio FM-1</title>'
         '<meta http-equiv="refresh" content="0; url=webapp/installer/">'
