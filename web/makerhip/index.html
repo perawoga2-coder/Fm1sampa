@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="th">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -66,6 +66,7 @@
   .note { font-size: 12px; color: #6b5f50; text-align: center; min-height: 1em; }
   .bar { position: fixed; top: 12px; right: 12px; z-index: 2; display: flex; gap: 12px; }
   .bar .pixbtn { font-size: 10px; padding: 8px 10px; background: var(--paper); }
+  .bar #lang { font-family: "Kanit", "Press Start 2P", sans-serif; font-size: 14px; font-weight: 600; padding: 4px 10px; }
   footer { position: relative; z-index: 1; text-align: center; font-size: 12px; color: var(--paper); text-shadow: 1px 1px 0 var(--ink); padding: 0 16px 24px; }
   @media (max-width: 760px) {
     .cards { grid-template-columns: 1fr; gap: 26px; }
@@ -88,7 +89,7 @@
 <div id="main">
   <div id="bg"><canvas id="bc" width="320" height="180"></canvas></div>
   <div class="bar">
-    <button id="lang" class="pixbtn" type="button">EN</button>
+    <button id="lang" class="pixbtn" type="button">ไทย</button>
     <button id="again" class="pixbtn" type="button">▶ INTRO</button>
     <button id="mute" class="pixbtn" type="button">♪</button>
   </div>
@@ -268,7 +269,7 @@ function icons(t) {
 }
 
 /* ---------- words: Thai first, English on a tap ---------- */
-let lang = store.get("mh.lang") || "th";
+let lang = store.get("mh.lang") === "th" ? "th" : "en";   /* English first, Thai on a tap */
 function paintLang() {
   document.documentElement.lang = lang;
   document.querySelectorAll("[data-th]").forEach(el => { el.textContent = el.dataset[lang] || el.dataset.th; });
