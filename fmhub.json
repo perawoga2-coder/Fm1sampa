@@ -1,0 +1,13 @@
+{
+  "what": "Sampling-first firmware built on Felucca 1.8.2. A SAMPLE row on HOME opens EDIT SAMPLE to trim and slice the three user slots, and one sample can span two or three slots, up to about 84 seconds. Use it alone or with the Burger Studio app for Android, which sends samples over USB.",
+  "author": "Maker Hip (Hippie Maker)",
+  "kinds": [
+    "drums",
+    "groove"
+  ],
+  "editor": "https://perawoga2-coder.github.io/Fm1sampa/webapp/editor/",
+  "cheat": "https://perawoga2-coder.github.io/Fm1sampa/makerhip/guide.pdf",
+  "image": "docs/card.png",
+  "sounds": "own: the Rock Heavy drum kit, synthesized by Burger Studio's own script (assets/burger-kit); CC0: VSCO-2 Community Edition and VCSL instrument samples (assets/samples-cc0) and the Hügelton Sample Pack",
+  "color": "#FF7A2F"
+}
