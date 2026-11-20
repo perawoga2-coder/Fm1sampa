@@ -59,7 +59,7 @@ On Linux x86-64 the toolchain runs natively and Docker is not needed.
 `JIELI_TOOLCHAIN` and `AC79_SDK` override the default locations
 (`~/.jieli/toolchain`, `~/fw-AC79_AIoT_SDK`).
 
-`./build.sh --release 1.8.1` makes a release build: the package identity becomes `FM-1_918`
+`./build.sh --release 1.8.1` makes a release build: the package identity becomes `FM-1_918` (Burger Studio: the one in `BURGER_ID`, `FM-1_4627`, its own on The Firmware Hub)
 and the version string `v1.8.1`; the package is `build/felucca-1.8.1.fwsc`, and
 `build/release-1.8.1/` holds what a release ships: the package, the app
 (`felucca-1.8.1-app.bin`), `SHA256SUMS`, the sample attribution, `LICENSE`, `LICENSING.md` and

@@ -396,6 +396,11 @@ def main():
         if not m:
             raise SystemExit(f"--release {a.release}: use X.Y, X.Y.Z, X.Y.Z.W or X.Y-suffix, one digit each")
         PRODUCT = "FM-1_9" + m[1] + m[2]
+        bid = SRC / "BURGER_ID"       # Burger Studio: an identity of its own (the hub lists one firmware per identity)
+        if bid.is_file():
+            PRODUCT = bid.read_text().strip()
+            if not re.fullmatch(r"FM-1_\d{3,5}", PRODUCT):
+                raise SystemExit(f"BURGER_ID: {PRODUCT!r} is not FM-1_ and 3 to 5 digits")
         VERSION = "v" + a.release.lower()      # e.g. v1.0, v1.1-rc1
         name = f"felucca-{a.release}.fwsc"
     if not (FW / "engines" / "src" / "felucca_engine.h").exists():
