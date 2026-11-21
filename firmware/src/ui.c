@@ -1131,7 +1131,8 @@ static void take_close(const track_t *t)         /* a pass ends: a take if it ch
         return;
     if (tk.ttrk != tk.trk)                       /* another track's takes: gone */
         tk.n = 0;
-    memmove(&tk.take[1], &tk.take[0], sizeof tk.take[0] * (TK_N - 1u));
+    for (uint32_t k = TK_N - 1u; k > 0u; k--)    /* (no memmove on the target: one take at a time) */
+        memcpy(tk.take[k], tk.take[k - 1u], sizeof tk.take[0]);
     memcpy(tk.take[0], tk.cur, sizeof tk.cur);
     tk.ttrk = tk.trk;
     if (tk.n < TK_N)
@@ -1174,7 +1175,8 @@ static int take_undo(void)
     fm1_irq_off();                               /* the audio ISR must not see half a pattern */
     memcpy(t->step, tk.take[0], sizeof t->step);
     fm1_irq_on();
-    memmove(&tk.take[0], &tk.take[1], sizeof tk.take[0] * (TK_N - 1u));
+    for (uint32_t k = 0; k + 1u < TK_N; k++)
+        memcpy(tk.take[k], tk.take[k + 1u], sizeof tk.take[0]);
     tk.n--;
     if (tk.trk == tk.ttrk)                       /* the recording goes on over what is left */
         take_open(t);
