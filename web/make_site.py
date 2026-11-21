@@ -10,7 +10,10 @@
   webapp/editor/index.html    editor.html (+ fukiai.ttf, FUKIAI-LICENSE.txt)
   src/                        not touched
 
-  web/make_site.py build/felucca-X.Y.fwsc X.Y OUT_DIR
+  web/make_site.py build/felucca-X.Y.fwsc X.Y OUT_DIR [TEST.fwsc TEST_VER]
+
+Burger Studio: with TEST.fwsc, the first package is the released one (webapp/installer/: what people use; it changes
+only with a release) and TEST.fwsc a build to try (webapp/test/, firmware/test/: every push), marked as such.
 
 The package must be one made by tools/fm1pkg_make.py (Felucca's own loader, no vendor files).
 Its identity (FM-1_NNN: Felucca's 9xx, Burger Studio's own 4627) is read from the package; the device must report it after
@@ -36,8 +39,8 @@ def product_of(raw):
     return "".join(chr((m - i - 1) & 0xFF) for i in range(BLOCKS) if (m := raw[i * BLK + KEEP]) != 0x7D)
 
 
-def main(pkg, version, out):
-    pkg, out = Path(pkg), Path(out)
+def page(pkg, version, sub=""):
+    """-> (the installer page for pkg, its file name, its bytes, its identity); sub: its folder under firmware/"""
     raw = pkg.read_bytes()
     product = product_of(raw)
     if not re.fullmatch(r"FM-1_\d{3,5}", product):              # (Burger Studio: FM-1_4627, its own; Felucca's are FM-1_9xx)
@@ -50,11 +53,16 @@ def main(pkg, version, out):
         strip_module((HERE / "fm1ota.js").read_text(encoding="utf-8")) + "\n" + \
         strip_module((HERE / "fm1backup.js").read_text(encoding="utf-8"))
     name = f"felucca-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
-    meta = json.dumps({"version": version, "product": product, "pkg": "../../firmware/" + name})
+    meta = json.dumps({"version": version, "product": product, "pkg": "../../firmware/" + sub + name})
     for mark in ("/*LIB*/", "/*META*/"):
         if html.count(mark) != 1:
             raise SystemExit(f"index_pkg.html must contain {mark} once; update make_site.py")
-    html = html.replace("/*LIB*/", lib).replace("/*META*/", meta)
+    return html.replace("/*LIB*/", lib).replace("/*META*/", meta), name, raw, product
+
+
+def main(pkg, version, out, test_pkg=None, test_ver=None):
+    pkg, out = Path(pkg), Path(out)
+    html, name, raw, product = page(pkg, version)
     inst, ed, fw = out / "webapp" / "installer", out / "webapp" / "editor", out / "firmware"
     for d in (inst, ed, fw):
         d.mkdir(parents=True, exist_ok=True)
@@ -81,6 +89,20 @@ def main(pkg, version, out):
     mh = HERE / "makerhip"                          # Burger Studio: the company's site (Maker Hip), at makerhip/
     if mh.is_dir():
         shutil.copytree(mh, out / "makerhip", dirs_exist_ok=True)
+    if test_pkg:                                    # a build to try: its own page and folder, said on the page
+        th, tn, traw, _ = page(Path(test_pkg), test_ver, "test/")
+        if th.count("<body>") != 1:
+            raise SystemExit("index_pkg.html must contain <body> once; update make_site.py")
+        th = th.replace("<body>", '<body><div style="background:#ff7a2f;color:#1a1020;font:600 15px system-ui,'
+                        'sans-serif;padding:10px 14px;text-align:center">TEST BUILD ' + test_ver +
+                        ': not released yet. The released installer is <a href="../installer/">here</a>.</div>', 1)
+        for d in (out / "webapp" / "test", fw / "test"):
+            d.mkdir(parents=True, exist_ok=True)
+        for old in (fw / "test").glob("felucca-*.fwsc"):
+            old.unlink()
+        (out / "webapp" / "test" / "index.html").write_text(th, encoding="utf-8")
+        shutil.copy(test_pkg, fw / "test" / tn)
+        print(f"site: webapp/test: {tn} ({len(traw)} B)")
     (out / "index.html").write_text(
         '<!doctype html><meta charset="utf-8"><title>Burger Studio FM-1</title>'
         '<meta http-equiv="refresh" content="0; url=webapp/installer/">'
@@ -89,6 +111,6 @@ def main(pkg, version, out):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
+    if len(sys.argv) not in (4, 6):
         sys.exit(__doc__)
-    main(*sys.argv[1:4])
+    main(*sys.argv[1:])

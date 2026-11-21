@@ -5,6 +5,9 @@ on:
   push:
     branches: ["**"]
     paths-ignore: ["**.md"]
+  workflow_run:                # a release was built and signed (release.yml): the site's installer moves on to it
+    workflows: ["release"]
+    types: [completed]
 
 permissions:
   contents: write
@@ -45,10 +48,30 @@ jobs:
       - name: Build
         run: ./build.sh --release "${{ steps.v.outputs.ver }}"
 
+      # The site's installer (webapp/installer/) is the newest RELEASE, not this build: it changes only when a release
+      # is made. This build is at webapp/test/. (web/SKIP_RELEASES: releases never offered.)
+      - name: The released package
+        id: rel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SKIP=$(grep -v '^#' web/SKIP_RELEASES | tr '\n' ' ')
+          for i in 1 2 3; do
+            TAG=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=30" \
+              --jq '.[] | select(.draft|not) | select(.prerelease|not) | select(.tag_name|startswith("v")) | select(any(.assets[]; .name|endswith(".fwsc"))) | .tag_name' \
+              | while read -r t; do case " $SKIP " in *" $t "*) ;; *) echo "$t"; break;; esac; done)
+            [ -n "$TAG" ] && gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p "felucca-${TAG#v}.fwsc" -D stable --clobber && break
+            sleep 15
+          done
+          test -s "stable/felucca-${TAG#v}.fwsc"
+          echo "ver=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "released: $TAG"
+
       - name: Installer site (GitHub Pages)
         run: |
           V="${{ steps.v.outputs.ver }}"
-          python3 web/make_site.py "build/felucca-$V.fwsc" "$V" site
+          S="${{ steps.rel.outputs.ver }}"
+          python3 web/make_site.py "stable/felucca-$S.fwsc" "$S" site "build/felucca-$V.fwsc" "$V"
           ls -R site | head -30
 
       - uses: actions/configure-pages@v5

@@ -1,0 +1,3 @@
+# Releases the site's installer never offers (one tag a line). The installer at webapp/installer/ is the newest
+# release that is not listed here; a build pushed since is at webapp/test/ only.
+v1.8.2-bs18
