@@ -447,8 +447,18 @@ static uint32_t layer_btn(void);
 /* FM operator pages belong to DIGITAL; they never appear on other instruments (without FELUCCA_FM4: never). SLICES:
  * a SLICE track's (ui_slice.c); LANES / LANES 2 a DRUM track's (its lane levels); FILTER an ANALOG track's; OPERATOR, OP ENV, OPERATOR 2 an FM6
  * track's (its patch's operators, ui_fm6op.c) */
+/* bs14: the SAMPLING pages (SAMPLING, SAMPLE FX) and EDIT SAMPLE (SLICES): while burger_slot_edit, EDIT goes round these */
+static int burger_smp_page(uint32_t i)
+{
+    const char *t = PAGES[i].title;
+    return PAGES[i].graph == GR_SLICES || (t[0] == 'S' && t[1] == 'A' && t[2] == 'M');
+}
 static int page_visible(uint32_t i)
 {
+    if (PAGES[i].fam == FAM_EDIT && burger_slot_edit)
+        return burger_smp_page(i);
+    if (PAGES[i].fam == FAM_EDIT && burger_smp_page(i) && PAGES[i].graph != GR_SLICES)
+        return 0;                                 /* (SAMPLING: from the SAMPLE row only) */
     if (PAGES[i].scope == SC_TRACK && PAGES[i].id[0] >= P_LN0 && PAGES[i].id[0] <= P_LN7)
         return TSEL->eng_req % NENGINES == ENGI_DRUM;
     if (PAGES[i].id[0] == P_FTYPE)                    /* FILTER (1.5, #104): ANALOG's */

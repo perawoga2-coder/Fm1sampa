@@ -478,6 +478,10 @@ static const page_t PAGES[] = {
     {"FILTER", FAM_EDIT, SC_TRACK, GR_NONE, {P_FTYPE, P_E4, P_E5, P_E7}},   /* ANALOG only (1.5, #104): TYPE CUT RES KTR */
     {"LANES", FAM_EDIT, SC_TRACK, GR_NONE, {P_LN0, P_LN1, P_LN2, P_LN3}},   /* DRUM only: the lane levels */
     {"LANES 2", FAM_EDIT, SC_TRACK, GR_NONE, {P_LN4, P_LN5, P_LN6, P_LN7}},
+    /* bs14, Burger Studio: SAMPLING, the pages EDIT on HOME's SAMPLE row opens (ui.c burger_smp_page), on the track that
+     * plays the slot (a SLICE track, ui_input.c burger_slot_play); SELECT / EDIT go round them and EDIT SAMPLE (SLICES) */
+    {"SAMPLING", FAM_EDIT, SC_TRACK, GR_NONE, {P_LEVEL, P_E3, P_E5, P_E4}},   /* LEVEL PTCH RVRS MODE (ONE GATE LOOP) */
+    {"SAMPLE FX", FAM_EDIT, SC_TRACK, GR_NONE, {P_DLY, P_REV, P_E7, P_E6}},   /* ECHO ROOM TONE DCAY */
     {"SLICES", FAM_EDIT, SC_TRACK, GR_SLICES, {0xFF, 0xFF, 0xFF, 0xFF}},   /* SLICE only: the slices by hand (ui_slice.c) */
     {"OPERATOR", FAM_EDIT, SC_TRACK, GR_FMOP, {0xFF, 0xFF, 0xFF, 0xFF}},    /* FM6 only: KNOB 1 the operator, then its */
     {"OP ENV", FAM_EDIT, SC_TRACK, GR_FMENV, {0xFF, 0xFF, 0xFF, 0xFF}},     /* bytes of the track's patch (ui_fm6op.c): */
@@ -533,5 +537,16 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
     if (pg->graph == GR_MOD)                          /* SRC DST AMT of the slot shown */
         id += 3u * mod_ui_slot;
     *valp = &TSEL->p[id];
+    if (pg->title[0] == 'S' && pg->title[1] == 'A' && pg->title[2] == 'M') {   /* bs14 SAMPLING: words of the app */
+        static param_desc_t sd[4];
+        const param_desc_t *d = track_desc(TSEL, id);
+        const char *lb = id == P_DLY ? "ECHO" : id == P_REV ? "ROOM" : id == P_E5 && d && str_eq(d->label, "REV") ? "RVRS" : 0;
+        if (d && lb) {
+            sd[slot] = *d;
+            sd[slot].label = lb;
+            return &sd[slot];
+        }
+        return d;
+    }
     return track_desc(TSEL, id);
 }

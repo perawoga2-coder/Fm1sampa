@@ -34,6 +34,8 @@ static const struct { const char *title, *hint; } HELP_PAGE[] = {
     {"FILTER", "[K1]LP BP HP[K2]CUTOFF[EDIT]VOICE"},
     {"LANES", H_LANES},
     {"LANES 2", H_LANES},
+    {"SAMPLING", "[ALGO]USR 1-3[EDIT]SAMPLE FX"},     /* bs14 */
+    {"SAMPLE FX", "[K1]ECHO[K2]ROOM[EDIT]TRIM"},
     {"SLICES", "[K1]SLICE[K2]MOVE[OCT+]SPLIT, JOIN"},
     {"OPERATOR", H_FMOP},
     {"OP ENV", H_FMOP},

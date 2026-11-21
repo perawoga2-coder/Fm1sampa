@@ -717,6 +717,49 @@ static int test_takes(void)
     return bad;
 }
 
+static void host_slot_make(uint32_t k);
+/* bs14: EDIT on HOME's SAMPLE row: SAMPLING, then SAMPLE FX, then EDIT SAMPLE; HOME leaves them */
+static int test_sampling_pages(void)
+{
+    int bad = 0, ok;
+    ui_power_on();
+    host_slot_make(0); smp_user_scan(0);
+    ui_home_view = HV_TRACKS;
+    go_home(); frame();
+    song.sel = NTRK - 1u; frame();
+    turn(EN_ALGO, 1); frame();                    /* past T4: the SAMPLE row */
+    ok = burger_sample_row == 1u;
+    press(B_EDIT); frames(320);
+    ok &= !ui.home && str_eq(cur_page()->title, "SAMPLING") && burger_slot_edit == 1u &&
+          ENGINES[TSEL->eng_req % NENGINES] == &ENG_SLICE && TSEL->p[P_E0] == 1;
+    bad += check("bs14 EDIT on the SAMPLE row: SAMPLING, on a SLICE track playing USR1", ok);
+    press(B_EDIT); frames(320);
+    ok = str_eq(cur_page()->title, "SAMPLE FX") && burger_slot_edit == 1u;
+    press(B_EDIT); frames(320);
+    ok &= cur_page()->graph == GR_SLICES && burger_slot_edit == 1u;
+    press(B_EDIT); frames(320);
+    ok &= str_eq(cur_page()->title, "SAMPLING");
+    bad += check("bs14 EDIT goes round SAMPLING, SAMPLE FX, EDIT SAMPLE (nothing else)", ok);
+    {
+        const param_desc_t *d;
+        int16_t *vp;
+        uint32_t k;
+        for (k = 0; k < NPAGES && !str_eq(PAGES[k].title, "SAMPLE FX"); k++)
+            ;
+        d = page_desc(&PAGES[k], 0, &vp);
+        ok = d && str_eq(d->label, "ECHO") && vp == &TSEL->p[P_DLY];
+        d = page_desc(&PAGES[k], 1, &vp);
+        ok &= d && str_eq(d->label, "ROOM") && vp == &TSEL->p[P_REV];
+        bad += check("bs14 SAMPLE FX: ECHO and ROOM are the track's DLY and REV sends", ok);
+    }
+    go_home(); frame();
+    bad += check("bs14 HOME leaves SAMPLING (EDIT is the track's EDIT pages again)", burger_slot_edit == 0u);
+    memset(host_slots, 0, sizeof host_slots);        /* (the other tests: empty slots) */
+    smp_user_scan(0); smp_user_scan(1); smp_user_scan(2);
+    burger_sample_row = 0;
+    return bad;
+}
+
 static int test_rec(void)
 {
     static const uint8_t FAMS[3] = {FAM_TRK, FAM_SEQ, FAM_ARP};
@@ -10097,6 +10140,7 @@ int main(void)
     bad += test_patterns();
     bad += test_rec();
     bad += test_takes();
+    bad += test_sampling_pages();
     bad += test_step_rec();
     bad += test_step_rec();
     bad += test_step_preview_chord_entry();

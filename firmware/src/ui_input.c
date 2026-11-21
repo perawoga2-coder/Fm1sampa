@@ -1371,9 +1371,39 @@ static void layer_lock_input(uint32_t pressed);
 
 /* a page button let go (they act on release; a layer's own button: layer_gesture). 1: it acted (EDIT on STEP, USER,
  * PROJECT, AUTOMATION) instead of opening a page */
+#if FELUCCA_SLICE
+static void burger_slot_play(void);
+static void burger_slot_track(uint32_t s);
+#endif
 static int page_tap(uint32_t b)
 {
     uint32_t f;
+#if FELUCCA_SLICE
+    /* Burger Studio, HOME's SAMPLE row picked (bs14: here, where both the plain taps and the quick layers' taps come;
+     * the EDIT layer's tap used to miss it and opened the track's EDIT 1). EDIT: SAMPLING, on the track that plays the
+     * slot; ENV LFO ARP FX: the pages of the slot's track (bs10) */
+    if (ui.home && burger_sample_row && b == B_EDIT) {
+        uint32_t k;
+        for (k = 0; k < NPAGES && !str_eq(PAGES[k].title, "SAMPLING"); k++)
+            ;                                           /* (SAMPLING first; EDIT / SELECT on to EDIT SAMPLE) */
+        burger_slot_edit = burger_slot_last ? burger_slot_last : 1u;
+        burger_div = (int16_t)SLC_DIV_AUTO;
+        burger_slot_play();                             /* (the keys play the slot shown, not the track's bank sound) */
+        sp.sel = 0;
+        if (k < NPAGES) {
+            ui.page = (uint8_t)k;
+            ui.fam_last[FAM_EDIT] = ui.page;
+            ui.home = 0;
+            page_entered();
+            ui.force = 1;
+        }
+        return 0;
+    }
+    if (ui.home && burger_sample_row && (b == B_ENV || b == B_LFO || b == B_ARP || b == B_FX)) {
+        burger_slot_track(burger_slot_last ? burger_slot_last : 1u);   /* bs10: the slot's track's pages */
+        burger_slot_edit = 0;
+    }
+#endif
     if (b == B_EDIT && detail_on()) {                    /* DETAIL (1.5.1): the step's CHANCE RATCH NUDGE VEL back */
         if (chain_busy())
             ui_message("STOP TO EDIT");
@@ -1818,33 +1848,12 @@ static void ui_input(void)
     for (id = 0; b; id++, b >>= 1)
         if (b & 1u) {
 #if FELUCCA_SLICE
-            if (ui.home && burger_sample_row && panel_btn_of(id) == B_EDIT) {   /* Burger Studio: EDIT on SAMPLE */
-                uint32_t k;
-                for (k = 0; k < NPAGES && PAGES[k].graph != GR_SLICES; k++)
-                    ;
-                burger_slot_edit = burger_slot_last ? burger_slot_last : 1u;
-                burger_div = (int16_t)SLC_DIV_AUTO;
-                burger_slot_play();                     /* (the keys play the slot shown, not the track's bank sound) */
-                sp.sel = 0;
-                if (k < NPAGES) {
-                    ui.page = (uint8_t)k;
-                    ui.home = 0;
-                    page_entered();
-                    ui.force = 1;
-                }
-                continue;
-            }
-            if (ui.home && burger_sample_row && (panel_btn_of(id) == B_ENV || panel_btn_of(id) == B_LFO ||
-                                                 panel_btn_of(id) == B_ARP || panel_btn_of(id) == B_FX)) {
-                burger_slot_track(burger_slot_last ? burger_slot_last : 1u);   /* bs10: the slot's track's pages */
-                burger_slot_edit = 0;
-            }
 #endif
             page_tap(panel_btn_of(id));
         }
 #if FELUCCA_SLICE
-    if (burger_slot_edit && (ui.home || cur_page()->graph != GR_SLICES))
-        burger_slot_edit = 0;                           /* EDIT SAMPLE left: SLICES is a SLICE track's page again */
+    if (burger_slot_edit && (ui.home || !burger_smp_page(ui.page)))
+        burger_slot_edit = 0;                           /* SAMPLING left: SLICES is a SLICE track's page again */
 #endif
     if (!ui.home && burger_sample_row)
         burger_sample_row = 0;                          /* (HOME left: the rows start at T1 again) */
