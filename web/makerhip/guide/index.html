@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sampling Guide</title>
-<meta name="description" content="Load your own samples into the M-VAVE FM-1 with the Burger Studio FM-1 firmware, step by step.">
+<meta name="description" content="Load your own samples into the M-VAVE FM-1 with the Burger Studio FM-1 firmware: an animated guide in chapters.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Kanit:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  :root { --bg: #1b1238; --bg2: #2b1a4f; --ink: #1a1020; --paper: #fff6e0; --orange: #ff7a2f; --orange2: #ffb070; --sun: #ffd86b; --teal: #2dd4bf; --dim: #c9bfd0; }
+  :root { --bg: #1b1238; --bg2: #2b1a4f; --ink: #1a1020; --paper: #fff6e0; --orange: #ff7a2f; --sun: #ffd86b; --teal: #2dd4bf; --pink: #ff5ca8; --dim: #c9bfd0; }
   @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #1b1238; } }
   :root[data-theme="light"] { --bg: #1b1238; }
   * { box-sizing: border-box; }
@@ -17,34 +17,71 @@
   body { font-family: "Kanit", system-ui, sans-serif; overflow-x: hidden;
          background: linear-gradient(180deg, #1b1238 0, #2b1a4f 180px, #47276a 300px, #1b1238 520px) no-repeat, var(--bg); }
   a { color: inherit; }
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 16px 80px; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; }
   .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .home { font-family: "Press Start 2P", monospace; font-size: 18px; color: var(--orange); text-decoration: none; text-shadow: 3px 3px 0 var(--ink); }
   .pix { font-family: "Press Start 2P", monospace; font-size: 11px; text-decoration: none; color: var(--ink); background: var(--paper);
-         padding: 10px 12px; display: inline-block;
+         padding: 10px 12px; display: inline-block; border: 0; cursor: pointer;
          box-shadow: 0 4px 0 var(--ink), 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 -4px 0 var(--ink); }
   .pix.orange { background: var(--orange); } .pix.teal { background: var(--teal); }
-  .pix:hover { filter: brightness(1.08); } .pix:focus-visible, .chips a:focus-visible { outline: 3px solid #ff5ca8; outline-offset: 6px; }
-  h1 { font-family: "Press Start 2P", monospace; font-size: clamp(18px, 4vw, 30px); line-height: 1.4; margin: 36px 0 10px; text-shadow: 3px 3px 0 var(--ink); }
-  .lead { font-size: 18px; color: var(--dim); max-width: 760px; margin: 0 0 22px; }
-  .actions { display: flex; gap: 18px; flex-wrap: wrap; margin: 8px 0 30px; }
-  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 28px; position: sticky; top: 0; z-index: 2; padding: 10px 0; background: var(--bg); }
-  .chips a { font-family: "Press Start 2P", monospace; font-size: 10px; text-decoration: none; color: var(--paper); border: 3px solid var(--paper);
-             padding: 8px 9px; white-space: nowrap; }
-  .chips a:hover { background: var(--paper); color: var(--ink); }
-  .pages { display: grid; grid-template-columns: repeat(2, 1fr); gap: 34px 28px; }
-  figure { margin: 0; scroll-margin-top: 70px; }
-  figure img { width: 100%; height: auto; aspect-ratio: 1080 / 1350; display: block; background: #26203a;
-               box-shadow: 0 8px 0 var(--ink), 8px 0 0 var(--ink), -8px 0 0 var(--ink), 0 -8px 0 var(--ink), 10px 14px 0 4px rgba(0,0,0,.35); }
-  figcaption { font-size: 15px; color: var(--dim); margin-top: 18px; }
-  figcaption b { color: var(--sun); font-weight: 600; }
-  .end { margin-top: 46px; padding: 22px 20px; background: var(--paper); color: var(--ink);
+  .pix:hover { filter: brightness(1.08); }
+  .pix:focus-visible, .ch:focus-visible, .ctl button:focus-visible { outline: 3px solid var(--pink); outline-offset: 6px; }
+  h1 { font-family: "Press Start 2P", monospace; font-size: clamp(18px, 4vw, 28px); line-height: 1.4; margin: 28px 0 6px; text-shadow: 3px 3px 0 var(--ink); }
+  .lead { font-size: 17px; color: var(--dim); max-width: 760px; margin: 0 0 20px; }
+
+  .player { display: grid; grid-template-columns: 280px 1fr; gap: 24px; align-items: start; }
+  .chapters { display: flex; flex-direction: column; gap: 8px; }
+  .ch { all: unset; cursor: pointer; display: flex; gap: 12px; align-items: center; padding: 10px 12px; background: rgba(255, 246, 224, .06);
+        border: 3px solid transparent; }
+  .ch .n { font-family: "Press Start 2P", monospace; font-size: 11px; min-width: 30px; height: 30px; display: grid; place-items: center;
+           background: var(--paper); color: var(--ink); }
+  .ch .t { font-size: 16px; line-height: 1.2; }
+  .ch:hover { background: rgba(255, 246, 224, .12); }
+  .ch[aria-current="true"] { border-color: var(--orange); background: rgba(255, 122, 47, .16); }
+  .ch[aria-current="true"] .n { background: var(--orange); }
+  .ch.done .n::after { content: ""; }
+
+  .stage-wrap { min-width: 0; }
+  .stage { position: relative; width: min(100%, 680px, calc(62vh * 1080 / 1350)); margin: 0 auto; aspect-ratio: 1080 / 1350; overflow: hidden; background: #110b24;
+           box-shadow: 0 8px 0 var(--ink), 8px 0 0 var(--ink), -8px 0 0 var(--ink), 0 -8px 0 var(--ink), 10px 14px 0 4px rgba(0,0,0,.35); }
+  .world { position: absolute; left: 0; top: 0; width: 1080px; height: 1350px; transform-origin: 0 0;
+           transition: transform 1.1s cubic-bezier(.65, 0, .35, 1); will-change: transform; }
+  .world img { display: block; width: 1080px; height: 1350px; }
+  .hl { position: absolute; border: 8px solid var(--sun); border-radius: 14px; box-shadow: 0 0 0 9999px rgba(10, 6, 24, .38);
+        transition: left 1.1s cubic-bezier(.65, 0, .35, 1), top 1.1s cubic-bezier(.65, 0, .35, 1), width 1.1s cubic-bezier(.65, 0, .35, 1),
+                    height 1.1s cubic-bezier(.65, 0, .35, 1), opacity .4s; pointer-events: none; }
+  .hl.off { opacity: 0; }
+  .cap { position: absolute; left: 12px; right: 12px; bottom: 12px; background: var(--paper); color: var(--ink); padding: 12px 14px;
+         font-size: clamp(14px, 2.4vw, 18px); line-height: 1.35; font-weight: 600;
+         box-shadow: 0 4px 0 var(--ink), 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 -4px 0 var(--ink);
+         transition: opacity .35s, transform .35s; }
+  .cap.hide { opacity: 0; transform: translateY(8px); }
+  .bar { height: 6px; background: rgba(255, 246, 224, .15); max-width: min(680px, calc(62vh * 1080 / 1350)); margin: 16px auto 0; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--orange); }
+  .ctl { display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 16px auto 0; max-width: 680px; }
+  .ctl button { font-family: "Press Start 2P", monospace; font-size: 11px; color: var(--ink); background: var(--paper); border: 0; padding: 12px 14px; cursor: pointer;
+                box-shadow: 0 4px 0 var(--ink), 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 -4px 0 var(--ink); min-width: 48px; }
+  .ctl button.play { background: var(--orange); min-width: 110px; }
+  .ctl .dots { display: flex; gap: 6px; }
+  .ctl .dots b { width: 10px; height: 10px; background: rgba(255, 246, 224, .25); }
+  .ctl .dots b.on { background: var(--sun); }
+  .ctl label { font-size: 14px; color: var(--dim); display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  .meta { text-align: center; color: var(--dim); font-size: 14px; margin-top: 10px; }
+
+  .actions { display: flex; gap: 18px; flex-wrap: wrap; margin: 6px 0 26px; }
+  .end { margin-top: 40px; padding: 20px; background: var(--paper); color: var(--ink);
          box-shadow: 0 6px 0 var(--ink), 6px 0 0 var(--ink), -6px 0 0 var(--ink), 0 -6px 0 var(--ink); }
   .end h2 { font-family: "Press Start 2P", monospace; font-size: 14px; margin: 0 0 12px; }
   .end p { margin: 0 0 16px; }
-  footer { text-align: center; font-size: 12px; color: var(--dim); margin-top: 40px; }
-  @media (max-width: 760px) { .pages { grid-template-columns: 1fr; } .lead { font-size: 16px; }
-    .chips { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; } }
+  footer { text-align: center; font-size: 12px; color: var(--dim); margin-top: 36px; }
+
+  @media (max-width: 860px) {
+    .player { grid-template-columns: 1fr; }
+    .chapters { flex-direction: row; overflow-x: auto; scrollbar-width: none; gap: 8px; padding-bottom: 4px; }
+    .ch { flex: 0 0 auto; padding: 8px 10px; }
+    .ch .t { font-size: 14px; white-space: nowrap; }
+  }
+  @media (prefers-reduced-motion: reduce) { .world, .hl { transition: none; } }
 </style>
 </head>
 <body>
@@ -55,35 +92,30 @@
   </div>
 
   <h1>SAMPLING GUIDE</h1>
-  <p class="lead">Load your own samples into the M-VAVE FM-1 with the Burger Studio FM-1 firmware: from the app to the FM-1's own screen, in seven steps.</p>
+  <p class="lead">Load your own samples into the M-VAVE FM-1 with the Burger Studio FM-1 firmware. Pick a chapter, or press play and watch them all.</p>
   <div class="actions">
     <a class="pix orange" href="../guide.pdf" download>DOWNLOAD PDF</a>
     <a class="pix teal" href="https://thefirmwarehub.com/?q=Burger" rel="noopener">GET THE FIRMWARE</a>
   </div>
 
-  <nav class="chips" aria-label="Steps">
-    <a href="#p0">START</a><a href="#p1">1 PLUG IN</a><a href="#p2">2 PICK</a><a href="#p3">3 SEND</a>
-    <a href="#p4">4 FIND</a><a href="#p5">5 TRIM</a><a href="#p6">6 PLAY</a><a href="#p7">7 TIPS</a>
-  </nav>
-
-  <section class="pages">
-    <figure id="p0"><img src="page0.webp" width="1080" height="1350" alt="Cover: load your own samples into the M-VAVE FM-1. You need an FM-1 with the Burger Studio FM-1 firmware, an Android tablet with the Burger Studio app, a USB-C cable and a sound.">
-      <figcaption><b>What you need.</b> The firmware, the app, one USB-C cable.</figcaption></figure>
-    <figure id="p1"><img src="page1.webp" width="1080" height="1350" loading="lazy" alt="Step 1: plug the tablet into the FM-1. The app connects by itself and says the FM-1 takes samples.">
-      <figcaption><b>1 · Plug it in.</b> The app finds the FM-1 by itself.</figcaption></figure>
-    <figure id="p2"><img src="page2.webp" width="1080" height="1350" loading="lazy" alt="Step 2: in the app, Sampler, Maker Bank, tap a sound's name, then Devices and Send into the sample slots.">
-      <figcaption><b>2 · Pick the sound.</b> Maker Bank, a name, Devices… → Send.</figcaption></figure>
-    <figure id="p3"><img src="page3.webp" width="1080" height="1350" loading="lazy" alt="Step 3: choose quality, slots and loudness, then a slot USR1 to USR3. A table shows how long a sound fits: 7 to 84 seconds.">
-      <figcaption><b>3 · Choose how it goes in.</b> HI, LONG or LO-FI; one to three slots.</figcaption></figure>
-    <figure id="p4"><img src="page4.webp" width="1080" height="1350" loading="lazy" alt="Step 4: on the FM-1's HOME screen, turn ALGO down past track 4 to the SAMPLE row with USR 1 2 3.">
-      <figcaption><b>4 · Find it on the FM-1.</b> HOME, turn ALGO down to SAMPLE.</figcaption></figure>
-    <figure id="p5"><img src="page5.webp" width="1080" height="1350" loading="lazy" alt="Step 5: press EDIT on the SAMPLE row to open EDIT SAMPLE. KNOB 1 picks a marker, KNOB 2 moves it, OCT plus splits or joins slices.">
-      <figcaption><b>5 · Trim and slice it.</b> EDIT, then KNOB 1 and KNOB 2.</figcaption></figure>
-    <figure id="p6"><img src="page6.webp" width="1080" height="1350" loading="lazy" alt="Step 6: on a track's EDIT page turn KNOB 1, SET or SRC, to USR1 so the track plays your sample.">
-      <figcaption><b>6 · Play it on a track.</b> SET or SRC = USR1.</figcaption></figure>
-    <figure id="p7"><img src="page7.webp" width="1080" height="1350" loading="lazy" alt="Step 7: MIXER page, KNOB 1 LEVEL for volume; CLOCK page, KNOB 3 CLK to INT when the FM-1 is unplugged.">
-      <figcaption><b>7 · Level and tips.</b> MIXER for volume, CLK = INT when unplugged.</figcaption></figure>
-  </section>
+  <div class="player">
+    <nav class="chapters" id="chapters" aria-label="Chapters"></nav>
+    <div class="stage-wrap">
+      <div class="stage" id="stage" aria-live="polite">
+        <div class="world" id="world"><img id="img" alt=""><div class="hl off" id="hl"></div></div>
+        <div class="cap" id="cap"></div>
+      </div>
+      <div class="bar"><i id="prog"></i></div>
+      <div class="ctl">
+        <button id="prev" aria-label="Previous">◀</button>
+        <button class="play" id="play">PLAY</button>
+        <button id="next" aria-label="Next">▶</button>
+        <span class="dots" id="dots"></span>
+        <label><input type="checkbox" id="auto" checked> next chapter by itself</label>
+      </div>
+      <div class="meta" id="meta"></div>
+    </div>
+  </div>
 
   <div class="end">
     <h2>READY?</h2>
@@ -96,5 +128,92 @@
   </div>
   <footer>© Maker Hip by Hippie Maker · FM-1 firmware built on Felucca (GPL-3.0) · not affiliated with M-VAVE</footer>
 </div>
+<script>
+const CH = [{"n":0,"title":"What you need","img":"page0.webp","shots":[{"box":[0,0,1080,520],"text":"Load your own samples into the M-VAVE FM-1."},{"box":[70,570,1010,976],"text":"You need the firmware, the app, one USB-C cable and a sound."},{"box":[70,976,1010,1146],"text":"Install it from The Firmware Hub. Back up your FM-1 first."}]},{"n":1,"title":"Plug it in","img":"page1.webp","shots":[{"box":[70,220,1010,720],"text":"Plug the tablet into the FM-1 with a USB-C cable, and open the app."},{"box":[540,230,1010,560],"text":"The FM-1's screen says APP CONNECTED."},{"box":[130,700,950,790],"text":"The app says the FM-1 takes samples: it is ready."},{"box":[80,984,1050,1068],"text":"Choose LEAD: the FM-1 follows the app's tempo."},{"box":[80,1074,1050,1158],"text":"Unplugged, the FM-1 goes back to its own clock by itself."}]},{"n":2,"title":"Pick the sound","img":"page2.webp","shots":[{"box":[94,284,540,344],"text":"Open SAMPLING in the app and pick a track, 1 to 5."},{"box":[94,570,370,640],"text":"Press REC and record anything: a voice, a guitar, spoons. Or Load\u2026 a WAV."},{"box":[94,360,986,550],"text":"Drag across the waveform to keep only the part you want."},{"box":[786,570,986,640],"text":"Press \u2192 FM-1 to send it."},{"box":[70,860,1010,1010],"text":"Any sound in Maker Bank can go too: its name, Devices\u2026, Send."}]},{"n":3,"title":"Send it","img":"page3.webp","shots":[{"box":[90,290,990,660],"text":"Choose the quality, how many slots, and the loudness."},{"box":[90,650,990,880],"text":"Then tap a slot: USR1, USR2 or USR3."},{"box":[70,920,1010,1060],"text":"The FM-1 counts it in, then says USR1 IN with the sound's name."},{"box":[70,1050,1010,1240],"text":"How long a sound fits: up to 84 s in LO-FI over three slots."}]},{"n":4,"title":"Find it on the FM-1","img":"page4.webp","shots":[{"box":[30,230,1050,760],"text":"HOME shows five rows: tracks 1 to 4 and the pink SAMPLE row."},{"box":[572,590,1052,654],"text":"Turn ALGO past track 4: the SAMPLE row lights up, with your sound's name."},{"box":[572,298,1052,398],"text":"Its four knobs: LEVEL, MUTE, BARS and the USR slot it plays."}]},{"n":5,"title":"Play it in steps","img":"page5.webp","shots":[{"box":[180,754,900,862],"text":"The SAMPLE row is track 5. Its 16 steps are under the name."},{"box":[60,990,1020,1090],"text":"With the row picked, the 16 white keys are its steps: tap to set, tap again to clear."},{"box":[80,1188,1050,1268],"text":"Press PLAY: your sound plays on the steps, in time with the tracks."}]},{"n":6,"title":"Shape the sound","img":"page6.webp","shots":[{"box":[40,250,360,570],"text":"EDIT on the SAMPLE row opens SAMPLING: LVL, PTCH, MODE (ONE or LOOP), USR."},{"box":[380,250,700,570],"text":"EDIT again: SAMPLE FX, with ECHO, ROOM, TONE and DCAY."},{"box":[720,250,1040,570],"text":"EDIT again: EDIT SAMPLE, to trim the head and the tail and slice it."},{"box":[80,930,1050,1010],"text":"These knobs are track 5's own: tracks 1 to 4 stay as they are."}]},{"n":7,"title":"Loop and layer","img":"page7.webp","shots":[{"box":[90,260,1000,360],"text":"Pick the SAMPLE row. Tap SAVE: tracks 1-4 record from the next bar."},{"box":[90,380,1000,480],"text":"Tap again: it stops at the bar's end. Your loop plays on the SAMPLE row."},{"box":[90,500,1000,600],"text":"Tap, then hold: the last layer comes off."},{"box":[90,620,1000,720],"text":"Hold alone: the SAMPLE row is cleared."},{"box":[80,792,1050,872],"text":"Tap SAVE again later: what you play is added on top of the loop."},{"box":[80,878,1050,958],"text":"Change, mute or lower tracks 1-4 yourself, and layer again."}]},{"n":8,"title":"Level and tips","img":"page8.webp","shots":[{"box":[48,250,528,730],"text":"Too quiet? HOME once: the MIXER. KNOB 1 is the track's LEVEL."},{"box":[572,250,1052,730],"text":"HOME twice: CLOCK. CLK is INT on its own, USB with the app."},{"box":[80,1100,1050,1180],"text":"On tracks 1-4, hold SAVE to take the last recorded pass off."}]}];
+const W = 1080, H = 1350;
+const $ = id => document.getElementById(id);
+const stage = $("stage"), world = $("world"), img = $("img"), hl = $("hl"), cap = $("cap");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let c = 0, s = 0, playing = false, timer = null, t0 = 0, dur = 0, raf = 0;
+const preload = CH.map(ch => { const i = new Image(); i.src = ch.img; return i; });
+
+CH.forEach((ch, i) => {
+  const b = document.createElement("button");
+  b.className = "ch"; b.type = "button";
+  b.innerHTML = `<span class="n">${i}</span><span class="t">${ch.title}</span>`;
+  b.onclick = () => { go(i, 0); play(true); };
+  $("chapters").appendChild(b);
+});
+
+function fit(box) {                       /* the world's transform that shows box, with a margin */
+  const sw = stage.clientWidth, sh = stage.clientHeight;
+  const [x0, y0, x1, y1] = box, bw = x1 - x0, bh = y1 - y0;
+  const whole = bw >= W * .95 && bh >= H * .95;
+  let k = Math.min(sw / (bw * 1.18), sh * .78 / (bh * 1.18));
+  k = Math.max(sw / W, Math.min(k, sw / 480));
+  if (whole) k = sw / W;
+  let tx = sw / 2 - (x0 + bw / 2) * k, ty = sh * .39 - (y0 + bh / 2) * k;
+  tx = Math.min(0, Math.max(sw - W * k, tx));
+  ty = Math.min(0, Math.max(sh - H * k, ty));
+  return { k, tx, ty, whole };
+}
+function show() {
+  const ch = CH[c], sh = ch.shots[s], f = fit(sh.box);
+  if (img.getAttribute("src") !== ch.img) img.src = ch.img;
+  world.style.transform = `translate(${f.tx}px, ${f.ty}px) scale(${f.k})`;
+  const [x0, y0, x1, y1] = sh.box, pad = 10;
+  hl.style.left = (x0 - pad) + "px"; hl.style.top = (y0 - pad) + "px";
+  hl.style.width = (x1 - x0 + 2 * pad) + "px"; hl.style.height = (y1 - y0 + 2 * pad) + "px";
+  hl.style.borderWidth = Math.max(4, 6 / f.k) + "px";
+  hl.classList.toggle("off", f.whole);
+  cap.classList.add("hide");
+  setTimeout(() => { cap.textContent = sh.text; cap.classList.remove("hide"); }, reduce ? 0 : 320);
+  [...$("chapters").children].forEach((b, i) => b.setAttribute("aria-current", i === c ? "true" : "false"));
+  $("dots").innerHTML = ch.shots.map((_, i) => `<b class="${i === s ? "on" : ""}"></b>`).join("");
+  $("meta").textContent = `Chapter ${c} of ${CH.length - 1} · ${ch.title} · ${s + 1}/${ch.shots.length}`;
+  history.replaceState(null, "", "#ch" + c);
+}
+function go(ci, si) {
+  c = (ci + CH.length) % CH.length; s = si;
+  show(); arm();
+}
+function step(d) {
+  let ns = s + d, nc = c;
+  if (ns >= CH[c].shots.length) { if (!$("auto").checked && playing) { play(false); return; } nc = c + 1; ns = 0; if (nc >= CH.length) { play(false); nc = 0; } }
+  if (ns < 0) { nc = c - 1; if (nc < 0) nc = CH.length - 1; ns = CH[nc].shots.length - 1; }
+  go(nc, ns);
+}
+function arm() {
+  clearTimeout(timer); cancelAnimationFrame(raf);
+  $("prog").style.width = "0";
+  if (!playing) return;
+  dur = 2600 + CH[c].shots[s].text.length * 45;
+  t0 = performance.now();
+  const tick = () => { $("prog").style.width = Math.min(100, (performance.now() - t0) / dur * 100) + "%"; if (playing) raf = requestAnimationFrame(tick); };
+  tick();
+  timer = setTimeout(() => step(1), dur);
+}
+function play(on) {
+  playing = on;
+  $("play").textContent = on ? "PAUSE" : "PLAY";
+  arm();
+}
+$("play").onclick = () => play(!playing);
+$("next").onclick = () => step(1);
+$("prev").onclick = () => step(-1);
+addEventListener("keydown", e => {
+  if (e.target.closest("input")) return;
+  if (e.key === " ") { e.preventDefault(); play(!playing); }
+  else if (e.key === "ArrowRight") step(1);
+  else if (e.key === "ArrowLeft") step(-1);
+});
+addEventListener("resize", show);
+let sx = 0;
+stage.addEventListener("touchstart", e => { sx = e.touches[0].clientX; }, { passive: true });
+stage.addEventListener("touchend", e => { const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 40) step(dx < 0 ? 1 : -1); });
+stage.addEventListener("click", () => play(!playing));
+const m = location.hash.match(/^#ch(\d+)$/);
+go(m ? Math.min(+m[1], CH.length - 1) : 0, 0);
+</script>
 </body>
 </html>
