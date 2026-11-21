@@ -183,6 +183,7 @@ static void ui_power_on(void)
     memset(&favorites, 0, sizeof favorites);
     ml_off();                                     /* (MIDI LEARN off, nothing learned) */
     memset(&undo, 0, sizeof undo);
+    memset(&tk, 0, sizeof tk);                    /* (bs12: no takes kept) */
     fop_op = fop_stg = 0;                         /* (FM6's operator pages: OP 1, stage 1, as at power-on) */
     memset(pat_last, 0, sizeof pat_last);
     memset(pat_from, 0, sizeof pat_from);                /* (the header's slot letter: none) */
@@ -659,6 +660,60 @@ static int test_patterns(void)
     turn(EN_K1, 1);
     bad += check("PRESETS: a factory preset's suggested pattern becomes the pick", preset_pat_hint() >= 0 &&
                  ui.ppick == (uint8_t)preset_pat_hint());
+    return bad;
+}
+
+/* bs12: UNDO TAKE: each pass recorded is a layer; SAVE held takes the newest off, the recording goes on */
+static int test_takes(void)
+{
+    int bad = 0, ok;
+    track_t *t;
+    ui_power_on();
+    go_home(); frame();
+    t = &trk[0];
+    memset(t->step, 0, sizeof t->step);                                        /* an empty track to layer on */
+    song.sel = 0;
+    song.rec = 1u;
+    song.playing = 1;
+    t->seq_idx = 0; frame();
+    t->step[0].time = ST_NOTE; t->step[0].n = 1; t->step[0].note[0] = 60;      /* pass 1: C4 on step 1 */
+    t->seq_idx = 9; frame();
+    t->seq_idx = 0; frame();                                                    /* .. the play head back: a take */
+    t->step[4].time = ST_NOTE; t->step[4].n = 1; t->step[4].note[0] = 64;      /* pass 2: E4 on step 5 */
+    t->seq_idx = 9; frame();
+    t->seq_idx = 0; frame();
+    bad += check("bs12 takes: two passes that recorded, two takes kept", tk.n == 2u && tk.ttrk == 1u);
+    t->seq_idx = 3; frame();
+    t->step[8].time = ST_NOTE; t->step[8].n = 1; t->step[8].note[0] = 67;      /* pass 3, under way: G4 on step 9 */
+    hold(B_SAVE);
+    ok = t->step[8].n == 0 && t->step[4].n == 1 && t->step[0].n == 1 && msg_is("UNDO TAKE  2 MORE") && song.rec == 1u;
+    bad += check("bs12 SAVE held while recording: the pass under way goes (G4), E4 and C4 stay, still recording", ok);
+    hold(B_SAVE);
+    bad += check("bs12 SAVE held again: E4 goes, C4 stays", t->step[4].n == 0 && t->step[0].n == 1 && msg_is("UNDO TAKE  1 MORE"));
+    t->step[12].time = ST_NOTE; t->step[12].n = 1; t->step[12].note[0] = 72;   /* recording goes on: C5 */
+    t->seq_idx = 9; frame();
+    t->seq_idx = 0; frame();
+    bad += check("bs12 the recording goes on after an undo: a new take (C5)", tk.n == 2u && t->step[12].n == 1);
+    hold(B_SAVE);
+    hold(B_SAVE);
+    bad += check("bs12 back to the empty track, one layer at a time", t->step[12].n == 0 && t->step[0].n == 0 && msg_is("UNDO TAKE"));
+    song.rec = 0; frame();
+    hold(B_SAVE);
+    bad += check("bs12 no take left: SAVE held is the load undo again", msg_is("NOTHING TO UNDO"));
+    /* a sound load after a take: SAVE held undoes the load (the newest), the take is dropped */
+    song.rec = 1u; t->seq_idx = 0; frame();
+    t->step[2].time = ST_NOTE; t->step[2].n = 1; t->step[2].note[0] = 62;
+    t->seq_idx = 9; frame();
+    t->seq_idx = 0; frame();
+    song.rec = 0; frame();
+    {
+        uint8_t pr = t->preset;
+        turn(EN_PRESET, 1); frame();
+        hold(B_SAVE);
+        bad += check("bs12 a sound load after a take: SAVE held undoes the load, the take's notes stay",
+                     t->preset == pr && t->step[2].n == 1);
+    }
+    song.playing = 0;
     return bad;
 }
 
@@ -10041,6 +10096,7 @@ int main(void)
     bad += test_sound_loads();
     bad += test_patterns();
     bad += test_rec();
+    bad += test_takes();
     bad += test_step_rec();
     bad += test_step_rec();
     bad += test_step_preview_chord_entry();

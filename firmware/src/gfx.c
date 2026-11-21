@@ -86,6 +86,7 @@ static struct {
     uint16_t bg, surf, text, theme, accent;
     uint16_t mid, dim, line, sel, tint, ink, rec, raise, key, lane, grid, ok;
     uint8_t light, mono;
+    uint8_t burger;              /* bs12: the BURGER palette: the tracks in the app's track colours (trk_col) */
     uint8_t style;               /* MENU > STYLE (ui.c style_apply): ST_FLAT, ST_LINE */
     uint32_t gen;                /* bumped by palette_set (the text ramps follow) */
 } ux;
@@ -114,6 +115,15 @@ static struct {
 #define T_LANE ux.lane           /* the piano roll: an in-scale row (SURF -> THEME 10 %) */
 #define T_GRID ux.grid           /* the piano roll: a step line (SURF -> TEXT 6 %; beats and C rows: RAISE) */
 #define NPALETTES UI_NPALETTES
+
+/* bs12, Burger Studio: a track's colour, as the app colours its tracks (Ui.kt TRACK_COLORS: orange, blue, green, yellow;
+ * its fifth, pink, for the SAMPLE row: c = NTRK). Other palettes: THEME, as Felucca draws every track */
+#define TRK_COL_SAMPLE NTRK
+static uint16_t trk_col(uint32_t c)
+{
+    static const uint16_t C[5] = {0xfbc5, 0x4d1f, 0x3693, 0xf628, 0xfaf5};
+    return ux.burger ? C[c < 5u ? c : 4u] : ux.theme;
+}
 
 static inline uint16_t ux_gray(uint32_t x5) { return (uint16_t)((x5 << 11) | (x5 << 6) | x5); }
 /* a + (b - a) * pct / 100 per channel, rounded; GREY on the red channel, so it stays gray */
@@ -160,6 +170,7 @@ static void palette_set(uint32_t i)
     ux.pal[0] = p->c1; ux.pal[1] = p->c2; ux.pal[2] = p->c3; ux.pal[3] = p->primary; ux.pal[4] = p->secondary;
     ux.bg = p->c1; ux.text = p->c3; ux.theme = p->c2; ux.accent = p->secondary; ux.rec = p->primary;
     ux.mono = !cust && i == UI_GREY_INDEX;
+    ux.burger = !cust && i == UI_BURGER_INDEX;
     ux.mid = ux_mix(ux.bg, ux.text, UI_MID_PCT);
     ux.dim = ux_mix(ux.bg, ux.text, UI_DIM_PCT);
     ux.line = ux_mix(ux.bg, ux.text, UI_LINE_PCT);
@@ -167,6 +178,8 @@ static void palette_set(uint32_t i)
     ux.tint = ux_mix(ux.bg, ux.theme, UI_TINT_PCT);
     ux.ink = ux.bg;
     surf = !cust && i == UI_BW_INDEX ? ux.bg : ux_mix(ux.bg, ux.theme, UI_SURF_PCT);   /* the card colour (MONO: black) */
+    if (ux.burger)                               /* bs12: the app's cards, a neutral dark grey (Ui.kt PANEL #15151B) */
+        surf = ux_mix(ux.bg, ux.text, 6);
     ux.surf = ux.style ? ux.bg : surf;
     ux.raise = ux_mix(surf, ux.text, UI_RAISE_PCT);
     ux.key = ux_mix(ux.bg, ux.text, UI_KEY_PCT);

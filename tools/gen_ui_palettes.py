@@ -55,8 +55,9 @@ PALETTES = [
     # 1.0.2: black and white (the derived tokens are set, not blended: bw()); the old MONO is GREY (id 0)
     # 1.8: its primary and secondary GREY's red and blue (were white)
     ("MONO",   (0, 0, 0),       (255, 255, 255), (255, 255, 255), RED,       (72, 140, 255)),
-    # Burger Studio (appended): a dark roast bun, cheddar orange, cream text, ketchup red, lettuce green
-    ("BURGER", (22, 13, 6),     (255, 150, 36),  (250, 236, 212), RED,       (126, 222, 92)),
+    # Burger Studio (appended): the app's own colours (Ui.kt Theme): its near-black page, its orange, its text,
+    # ketchup red for REC, teal for the one active thing (bs12: the tracks take the app's track colours, gfx.c trk_col)
+    ("BURGER", (11, 11, 15),    (255, 122, 47),  (242, 242, 245), RED,       (45, 212, 191)),
 ]
 BW = "MONO"
 BW_GREY = (82, 82, 82)             # MONO's one mid grey (RGB565 10/20/10): DIM LINE RAISE LANE

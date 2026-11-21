@@ -1581,6 +1581,7 @@ static void ui_input(void)
         usb_serial_apply();                             /* (MENU > USB SERIAL: when the menu has closed) */
     settings_later_poll();                              /* (#197: LIST / FAV written once the view is left or idle) */
     follow_poll();                                      /* (1.6, #242: SEQ's roll follows the play position) */
+    take_poll();                                        /* (bs12: UNDO TAKE, each pass recorded) */
     if (scr_input(pressed, notes))                      /* MENU > SCREEN OFF: dark, or the wake gesture: swallowed */
         return;                                         /* (before the buttons' timers: no tap or hold after it) */
     if (mom.n && !mom_down()) {                         /* MOMENTARY: LFO let go (or the menu, a layer ..): back */
@@ -1700,8 +1701,8 @@ static void ui_input(void)
     }
     if (save == BT_HOLD && chain_busy())
         ui_message("STOP TO UNDO");
-    else if (save == BT_HOLD)                                /* SAVE held: undo the last sound load */
-        undo_swap();
+    else if (save == BT_HOLD && !take_undo())                /* SAVE held: the last take (bs12), else */
+        undo_swap();                                         /* the last sound load */
     else if (save == BT_TAP && !ui.confirm)             /* SAVE acts on release (a hold is the undo) */
         open_family(FAM_SAVE);
     if (ui.confirm) {                                   /* OCT- cancels, OCT+ does it; nothing else reacts */

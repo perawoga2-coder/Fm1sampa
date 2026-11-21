@@ -1819,10 +1819,11 @@ static void home_track_row(uint32_t c, uint32_t pos)
     uint32_t sel = c == song.sel && !burger_sample_row, mute = t->p[P_MUTE] != 0, large = (ui_prefs & PREF_LARGE) != 0u, lit = (uint32_t)midi_lit(c);
     uint32_t len = (uint32_t)clamp(t->p[P_SLEN], 1, NSTEP), np = (len + 15u) / 16u, pg, p0, ph, i, sig, carry = 0;
     int32_t y = Y_GRAPH + (int32_t)pos * TR_PITCH, m, x, xr = 222, ch = large ? AF_M_CAP_H : AF_S_CAP_H;
-    uint16_t bg = sel ? T_THEME : T_SURF, half = ux_mix(T_THEME, T_INK, 35);
-    uint16_t cn = sel ? (mute ? ux_mix(T_THEME, T_INK, 55) : T_INK) : mute ? T_DIM : T_THEME;   /* a note */
-    uint16_t ca = sel || mute ? cn : T_ACCENT, cs = sel ? half : T_RAISE;   /* accented; a stub */
-    uint16_t cp = sel ? ux_mix(T_THEME, T_INK, 20) : T_RAISE, cpl = sel ? T_INK : mute ? T_MID : T_TEXT;   /* playing */
+    uint16_t tc = trk_col(c);                        /* bs12: the track's own colour (BURGER), else THEME */
+    uint16_t bg = sel ? tc : T_SURF, half = ux_mix(tc, T_INK, 35);
+    uint16_t cn = sel ? (mute ? ux_mix(tc, T_INK, 55) : T_INK) : mute ? T_DIM : tc;   /* a note */
+    uint16_t ca = sel || mute ? cn : (ux.burger ? T_TEXT : T_ACCENT), cs = sel ? half : T_RAISE;   /* accented; a stub */
+    uint16_t cp = sel ? ux_mix(tc, T_INK, 20) : T_RAISE, cpl = sel ? T_INK : mute ? T_MID : T_TEXT;   /* playing */
     char b[16];
     pg = song.playing ? t->seq_idx / 16u : sel ? ui.cursor / 16u : 0u;
     if (pg >= np)
@@ -1834,7 +1835,7 @@ static void home_track_row(uint32_t c, uint32_t pos)
     t->peak = 0;
     if (m < ts.meter[c] - 1)
         m = ts.meter[c] - 1;                         /* (falls as the MIXER's) */
-    sig = str_hash(1u + sel + mute * 2u + large * 4u + t->eng_req * 8u, b) + steps_hash(t) * 31u + pg * 7919u +
+    sig = str_hash(1u + sel + mute * 2u + large * 4u + t->eng_req * 8u + ux.burger * 0x4000u, b) + steps_hash(t) * 31u + pg * 7919u +
           ph * 104729u + len * 1299709u + lit * 15485863u + pos * 179424673u;   /* (1.5.5: MIDI IN lights the cushion) */
     if (!ui.force && sig == ts.col[c]) {
         if (m != ts.meter[c]) {                      /* the meter alone: its slot */
@@ -1849,11 +1850,11 @@ static void home_track_row(uint32_t c, uint32_t pos)
     ts.meter[c] = (uint8_t)m;
     cv_begin(TR_W, TR_H, T_BG);
     cv_rrect(0, 0, TR_W, TR_H, 5, bg, T_BG);
-    cv_icon_mid(4, TR_H / 2, 16, trk_icon(c, 1), lit ? (sel ? half : T_ACCENT) : sel ? T_INK : mute ? T_DIM : T_MID, bg);
+    cv_icon_mid(4, TR_H / 2, 16, trk_icon(c, 1), lit ? (sel ? half : T_ACCENT) : sel ? T_INK : mute ? T_DIM : ux.burger ? tc : T_MID, bg);
     if (mute) {                                      /* MUTE: its badge at the name line's end */
         xr -= kc_w(KC_MUTE);
         GFX_HOOK_ALIGN(0, TR_NY(large), 0, TR_NY(large) + ch, AL_V, "tracks row badge on the name's line");
-        cv_keycap(xr, TR_NY(large) + (ch - KC_H) / 2, KC_MUTE, sel ? T_INK : T_KEY, sel ? T_THEME : T_INK, bg);
+        cv_keycap(xr, TR_NY(large) + (ch - KC_H) / 2, KC_MUTE, sel ? T_INK : T_KEY, sel ? tc : T_INK, bg);
         xr -= 6;
     }
     x = 24;
@@ -1897,7 +1898,7 @@ static void home_track_row(uint32_t c, uint32_t pos)
     }
     if (np > 1u)                                     /* LEN > 16: the pages, top to bottom */
         for (i = 0; i < np; i++)
-            cv_rect(TR_PX, TR_SB - 3 * (int32_t)(np - i) + 1, 3, 2, i == pg ? (sel ? T_INK : T_THEME) : cs);
+            cv_rect(TR_PX, TR_SB - 3 * (int32_t)(np - i) + 1, 3, 2, i == pg ? (sel ? T_INK : tc) : cs);
     tr_meter(TR_MX, TR_MY, c, cs, sel ? T_INK : T_MID, bg);
     cv_blit(3, (uint32_t)y);
 }
@@ -1907,10 +1908,11 @@ static void home_sample_row(uint32_t pos)
 {
     uint32_t sel = burger_sample_row, large = (ui_prefs & PREF_LARGE) != 0u, k, sig;
     int32_t y = Y_GRAPH + (int32_t)pos * TR_PITCH, x, ch = large ? AF_M_CAP_H : AF_S_CAP_H;
-    uint16_t bg = sel ? T_THEME : T_SURF;
+    uint16_t tc = trk_col(TRK_COL_SAMPLE);           /* bs12: the app's fifth track colour (BURGER), else THEME */
+    uint16_t bg = sel ? tc : T_SURF;
     uint32_t own = burger_slot_owner(burger_slot_last ? burger_slot_last : 1u);   /* bs10: the track that plays it */
     char tl[20];
-    sig = 0xB5u + sel * 2u + large * 4u + pos * 8u + (uint32_t)usr_nz[0] * 64u + (uint32_t)usr_nz[1] * 4096u +
+    sig = 0xB5u + ux.burger * 0x100000u + sel * 2u + large * 4u + pos * 8u + (uint32_t)usr_nz[0] * 64u + (uint32_t)usr_nz[1] * 4096u +
           (uint32_t)usr_nz[2] * 262144u + burger_slot_last * 16777216u + own * 0x10000000u +
           ((uint32_t)usr_cov[1] + 4u * usr_cov[2]) * 0x40000000u;
     if (!ui.force && sig == ts_sample_sig)
@@ -1918,7 +1920,7 @@ static void home_sample_row(uint32_t pos)
     ts_sample_sig = sig;
     cv_begin(TR_W, TR_H, T_BG);
     cv_rrect(0, 0, TR_W, TR_H, 5, bg, T_BG);
-    cv_icon_mid(4, TR_H / 2, 16, ICON_SAMPLE, sel ? T_INK : T_MID, bg);
+    cv_icon_mid(4, TR_H / 2, 16, ICON_SAMPLE, sel ? T_INK : ux.burger ? tc : T_MID, bg);
     cv_free_text(24, TR_NY(large) - (large ? AF_M_CAP_Y : AF_S_CAP_Y), large ? &AF_M : &AF_S, "SAMPLE",
                  sel ? T_INK : T_TEXT, bg, 90);
     if (!large) {
@@ -1937,13 +1939,13 @@ static void home_sample_row(uint32_t pos)
     for (k = 0; k < 3u; k++) {                       /* the three slots: a pill each, lit when it holds a sample */
         static const char *const N[3] = {"1", "2", "3"};
         uint32_t lit = usr_nz[k] || usr_cov[k];      /* (bs10: a slot inside a joined sample: lit, joined to the one before) */
-        uint16_t on = lit ? (sel ? T_INK : T_THEME) : (sel ? ux_mix(T_THEME, T_INK, 35) : T_RAISE);
+        uint16_t on = lit ? (sel ? T_INK : tc) : (sel ? ux_mix(tc, T_INK, 35) : T_RAISE);
         x = 176 + (int32_t)k * 18;
         cv_rrect(x, (TR_H - 15) / 2, 16, 15, 4, on, bg);
         if (usr_cov[k])
             cv_rect(x - 4, (TR_H - 15) / 2 + 5, 6, 5, on);
         else
-            cv_text_on(x + 4, (TR_H - AF_S_CAP_H) / 2 - AF_S_CAP_Y, &AF_S, N[k], usr_nz[k] ? (sel ? T_THEME : T_INK) : T_DIM, on);
+            cv_text_on(x + 4, (TR_H - AF_S_CAP_H) / 2 - AF_S_CAP_Y, &AF_S, N[k], usr_nz[k] ? (sel ? tc : T_INK) : T_DIM, on);
         (void)ch;
     }
     cv_blit(3, (uint32_t)y);

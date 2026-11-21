@@ -1098,6 +1098,96 @@ static void motion_undo_done(track_t *t)
 
 static int param_kept(uint32_t i);
 
+/* bs12, Burger Studio: UNDO TAKE, for layering by ear. Each pass recorded live into the selected track (it armed,
+ * the transport running, no song chain) that changed its steps is a take: the steps as that pass began are kept,
+ * TK_N deep. SAVE held while a take is newer than the last load's undo copy puts the newest take back: that layer
+ * goes, the recording goes on over what is left (held again: the layer before, and so on). Steps only: the sound,
+ * the mix and the automation stay. Kept for one track: recording another track starts again (main loop only) */
+#define TK_N 4u
+static struct {
+    uint8_t trk;                 /* track + 1 watched (recording), 0 none */
+    uint8_t n;                   /* takes kept */
+    uint8_t ttrk;                /* their track + 1 */
+    uint16_t last_idx;           /* the play head at the last poll: a pass ends when it goes back */
+    uint32_t cur_sig;            /* steps_sig of cur */
+    uint32_t t_ms;               /* the newest take's time */
+    uint32_t umark;              /* undo_mark() when the newest take was kept: changed since, a newer undo copy */
+    step_t cur[NSTEP];           /* the steps as this pass began */
+    step_t take[TK_N][NSTEP];    /* [0] the newest */
+} tk __attribute__((section(".pool")));
+static uint32_t undo_mark(void)                  /* the load / edit undo copy as it is (any copy taken since: changed) */
+{
+    return fnv(2166136261u, &undo, sizeof undo);
+}
+static void take_open(const track_t *t)          /* a pass begins: the steps as they are now */
+{
+    memcpy(tk.cur, t->step, sizeof tk.cur);
+    tk.cur_sig = steps_sig(t);
+    tk.last_idx = t->seq_idx;
+}
+static void take_close(const track_t *t)         /* a pass ends: a take if it changed the steps */
+{
+    if (steps_sig(t) == tk.cur_sig)
+        return;
+    if (tk.ttrk != tk.trk)                       /* another track's takes: gone */
+        tk.n = 0;
+    memmove(&tk.take[1], &tk.take[0], sizeof tk.take[0] * (TK_N - 1u));
+    memcpy(tk.take[0], tk.cur, sizeof tk.cur);
+    tk.ttrk = tk.trk;
+    if (tk.n < TK_N)
+        tk.n++;
+    tk.t_ms = fm1_ms | 1u;
+    tk.umark = undo_mark();
+}
+static void take_poll(void)                       /* every pass of ui_input() */
+{
+    uint32_t on = song.playing && ((song.rec >> song.sel) & 1u) && !chain.running;
+    if (tk.trk && (!on || tk.trk != song.sel + 1u)) {   /* recording stopped, or moved on: the last pass ends */
+        take_close(&trk[(tk.trk - 1u) % NTRK]);
+        tk.trk = 0;
+    }
+    if (!on)
+        return;
+    track_t *t = &trk[song.sel % NTRK];
+    if (!tk.trk) {
+        tk.trk = (uint8_t)(song.sel + 1u);
+        take_open(t);
+    } else if (t->seq_idx < tk.last_idx) {       /* the play head went back to the start: a pass */
+        take_close(t);
+        take_open(t);
+    } else {
+        tk.last_idx = t->seq_idx;
+    }
+}
+/* SAVE held: the newest take back, when it is newer than the load undo's copy; 0: nothing done (the load undo) */
+static int take_undo(void)
+{
+    track_t *t;
+    char m[20] = "UNDO TAKE";
+    if (!tk.n || (undo.trk && tk.umark != undo_mark())) {   /* a load / edit since the take: its undo first */
+        tk.n = 0;
+        return 0;
+    }
+    t = &trk[(tk.ttrk - 1u) % NTRK];
+    if (tk.trk == tk.ttrk)                       /* recording it now: this pass so far goes too */
+        take_close(t);
+    fm1_irq_off();                               /* the audio ISR must not see half a pattern */
+    memcpy(t->step, tk.take[0], sizeof t->step);
+    fm1_irq_on();
+    memmove(&tk.take[0], &tk.take[1], sizeof tk.take[0] * (TK_N - 1u));
+    tk.n--;
+    if (tk.trk == tk.ttrk)                       /* the recording goes on over what is left */
+        take_open(t);
+    if (tk.n) {
+        m[9] = ' '; m[10] = ' ';
+        m[11] = (char)('0' + tk.n);
+        memcpy(&m[12], " MORE", 6);
+    }
+    ui_message(m);
+    ui.force = 1;
+    return 1;
+}
+
 /* SAVE held: what the loads changed (undo.what) and the copy change places, so held again = the loads
  * again. The sound: engine, preset and its parameters (not param_kept); the pattern: the steps and LEN
  * DIV SWING GATE. The mix (LEVEL PAN MUTE) stays: no load changes it */
