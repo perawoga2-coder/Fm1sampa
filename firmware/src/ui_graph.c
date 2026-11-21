@@ -1794,16 +1794,22 @@ static void draw_tracks(void)
  * its ink INK, as a list's selected row); a muted track's steps DIM. Each row is its own canvas with its own signature
  * (ts.col, the MIXER's: the two never show together); a meter that moved alone redraws its slot only. LINE: the rows on
  * BG, 1 px rules between them */
-#define TR_H 29                                      /* a row; rows TR_PITCH apart from Y_GRAPH, 3 .. 237 across */
-#define TR_PITCH 31
+/* bs12+, Burger Studio (bs13): FIVE rows, the four tracks and the SAMPLE row always in view (tr5: the BURGER palette,
+ * not LARGE): 22 px rows 25 apart, the steps' bars lower, the SAMPLE row's second line left out */
+static uint8_t tr5;
+#define TR_H (tr5 ? 22 : 29)                         /* a row; rows TR_PITCH apart from Y_GRAPH, 3 .. 237 across */
+#define TR_PITCH (tr5 ? 25 : 31)
 #define TR_W 234
-#define TR_NY(lg) ((lg) ? 2 : 4)                     /* the name line's capitals from row 4 (LARGE, M: 2) */
-#define TR_SB 26                                     /* the steps: bars standing on row 25 */
+#define TR_NY(lg) ((lg) ? 2 : tr5 ? 2 : 4)           /* the name line's capitals from row 4 (LARGE, M: 2; five rows: 2) */
+#define TR_SB (tr5 ? 21 : 26)                        /* the steps: bars standing on row 25 (five rows: 20) */
+#define TR_NOTE_H (tr5 ? 5 : 7)                      /* a note's bar, an accented one's */
+#define TR_ACC_H (tr5 ? 7 : 10)
+#define TR_CELL_Y (tr5 ? 12 : 15)                    /* the step playing: its raised cell's top (under the name line) */
 #define TR_BW 9                                      /* a step's bar, 11 px apart, 4 more between groups of 4 */
 #define TR_PX 216                                    /* the page pips */
 #define TR_MX 226                                    /* the meter: 4 x 22 from row 4 */
-#define TR_MY 4
-#define TR_MH 22
+#define TR_MY (tr5 ? 3 : 4)
+#define TR_MH (tr5 ? 16 : 22)
 static int32_t tr_bx(uint32_t i) { return 24 + (int32_t)i * 11 + (int32_t)(i / 4u) * 4; }
 static void tr_meter(int32_t x, int32_t y, uint32_t c, uint16_t slot, uint16_t fill, uint16_t under)
 {
@@ -1836,7 +1842,7 @@ static void home_track_row(uint32_t c, uint32_t pos)
     if (m < ts.meter[c] - 1)
         m = ts.meter[c] - 1;                         /* (falls as the MIXER's) */
     sig = str_hash(1u + sel + mute * 2u + large * 4u + t->eng_req * 8u + ux.burger * 0x4000u, b) + steps_hash(t) * 31u + pg * 7919u +
-          ph * 104729u + len * 1299709u + lit * 15485863u + pos * 179424673u;   /* (1.5.5: MIDI IN lights the cushion) */
+          ph * 104729u + tr5 * 0x9E3779B1u + len * 1299709u + lit * 15485863u + pos * 179424673u;   /* (1.5.5: MIDI IN lights the cushion) */
     if (!ui.force && sig == ts.col[c]) {
         if (m != ts.meter[c]) {                      /* the meter alone: its slot */
             ts.meter[c] = (uint8_t)m;
@@ -1876,21 +1882,21 @@ static void home_track_row(uint32_t c, uint32_t pos)
         int32_t bx = tr_bx(i);
         uint16_t under = i == ph ? cp : bg;
         if (i == ph)                                 /* the step playing: a raised cell */
-            cv_rrect(bx - 1, 15, TR_BW + 2, 13, 2, cp, bg);
+            cv_rrect(bx - 1, TR_CELL_Y, TR_BW + 2, TR_H - TR_CELL_Y - 1, 2, cp, bg);
         if (st->time == ST_TIE && carry) {           /* carried on: joined to the bar before */
             int32_t x0 = i ? tr_bx(i - 1u) + TR_BW : bx - 2;
-            cv_rect(x0, TR_SB - 7, bx + 2 - x0, 7, i == ph ? cpl : cn);
-            cv_rrect(bx, TR_SB - 7, TR_BW, 7, 2, i == ph ? cpl : cn, under);
+            cv_rect(x0, TR_SB - TR_NOTE_H, bx + 2 - x0, TR_NOTE_H, i == ph ? cpl : cn);
+            cv_rrect(bx, TR_SB - TR_NOTE_H, TR_BW, TR_NOTE_H, 2, i == ph ? cpl : cn, under);
         } else if (st->time == ST_NOTE && st->n) {   /* notes: a bar, accented taller */
             int acc = (st->flags & SF_ACCENT) != 0u;
-            cv_rrect(bx, TR_SB - (acc ? 10 : 7), TR_BW, acc ? 10 : 7, 2, i == ph ? cpl : acc ? ca : cn, under);
+            cv_rrect(bx, TR_SB - (acc ? TR_ACC_H : TR_NOTE_H), TR_BW, acc ? TR_ACC_H : TR_NOTE_H, 2, i == ph ? cpl : acc ? ca : cn, under);
             carry = 1;
             continue;
         } else if (st->time == ST_NOTE && st->hit) { /* DRUM hits: a pad, two for two hits or more */
             uint16_t pc = i == ph ? cpl : (st->acc & st->hit) ? ca : cn;
             cv_rrect(bx, TR_SB - 4, TR_BW, 4, 1, pc, under);
             if (st->hit & (st->hit - 1u))
-                cv_rrect(bx, TR_SB - 9, TR_BW, 4, 1, pc, under);
+                cv_rrect(bx, TR_SB - (tr5 ? 8 : 9), TR_BW, tr5 ? 3 : 4, 1, pc, under);
         } else {                                     /* empty, a REST, a TIE carrying nothing */
             cv_rect(bx, TR_SB - 2, TR_BW, 2, i == ph ? (sel ? T_INK : T_MID) : st->time == ST_TIE ? (sel ? T_INK : T_MID) : cs);
         }
@@ -1912,18 +1918,37 @@ static void home_sample_row(uint32_t pos)
     uint16_t bg = sel ? tc : T_SURF;
     uint32_t own = burger_slot_owner(burger_slot_last ? burger_slot_last : 1u);   /* bs10: the track that plays it */
     char tl[20];
-    sig = 0xB5u + ux.burger * 0x100000u + sel * 2u + large * 4u + pos * 8u + (uint32_t)usr_nz[0] * 64u + (uint32_t)usr_nz[1] * 4096u +
+    sig = 0xB5u + ux.burger * 0x100000u + tr5 * 0x200000u + sel * 2u + large * 4u + pos * 8u + (uint32_t)usr_nz[0] * 64u + (uint32_t)usr_nz[1] * 4096u +
           (uint32_t)usr_nz[2] * 262144u + burger_slot_last * 16777216u + own * 0x10000000u +
           ((uint32_t)usr_cov[1] + 4u * usr_cov[2]) * 0x40000000u;
+    {                                                /* (bs13: the name shown; 8 bytes, not terminated) */
+        uint32_t sl = (burger_slot_last ? burger_slot_last - 1u : 0u) % 3u, j;
+        char nb[9] = {0};
+        if (usr_nz[sl])
+            for (j = 0; j < 8u; j++)
+                nb[j] = ((const smp_user_hdr_t *)smp_user_xip(sl))->name[j];
+        sig = str_hash(sig, nb);
+    }
     if (!ui.force && sig == ts_sample_sig)
         return;
     ts_sample_sig = sig;
     cv_begin(TR_W, TR_H, T_BG);
     cv_rrect(0, 0, TR_W, TR_H, 5, bg, T_BG);
     cv_icon_mid(4, TR_H / 2, 16, ICON_SAMPLE, sel ? T_INK : ux.burger ? tc : T_MID, bg);
-    cv_free_text(24, TR_NY(large) - (large ? AF_M_CAP_Y : AF_S_CAP_Y), large ? &AF_M : &AF_S, "SAMPLE",
-                 sel ? T_INK : T_TEXT, bg, 90);
-    if (!large) {
+    {                                                /* bs13: the picked slot's sound by its name (as the app sent it) */
+        uint32_t sl = (burger_slot_last ? burger_slot_last : 1u) - 1u, j;
+        char nm[9] = "SAMPLE";
+        if (sl < 3u && usr_nz[sl]) {
+            const smp_user_hdr_t *h = (const smp_user_hdr_t *)smp_user_xip(sl);
+            for (j = 0; j < 8u && h->name[j] >= 32 && h->name[j] < 127; j++)
+                nm[j] = h->name[j];
+            if (j)
+                nm[j] = 0;
+        }
+        cv_free_text(24, TR_NY(large) - (large ? AF_M_CAP_Y : AF_S_CAP_Y), large ? &AF_M : &AF_S, nm,
+                     sel ? T_INK : T_TEXT, bg, 90);
+    }
+    if (!large && !tr5) {                            /* (five rows: one line, no room for the second) */
         const char *t0 = own < NTRK ? (sel ? "EDIT SAMPLE  T" : "USR1-3  ON T") : (sel ? "EDIT: EDIT SAMPLE" : "USR1-3");
         uint32_t n = 0;                              /* own: "EDIT SAMPLE  T2", where its ENV / LFO / ARP pages are */
         while (t0[n] && n < sizeof tl - 2u) {
@@ -1952,22 +1977,33 @@ static void home_sample_row(uint32_t pos)
 }
 static void draw_home_tracks(void)
 {
-    uint32_t c;
+    uint32_t c, rows, gap;
+    uint8_t five = ux.burger && !(ui_prefs & PREF_LARGE);   /* (bs13: five rows, the SAMPLE row always shown) */
+    if (five != tr5) {
+        tr5 = five;
+        ui.force = 1;
+    }
+    rows = tr5 ? NTRK + 1u : NTRK;
+    gap = (uint32_t)(TR_PITCH - TR_H);
     if (ui.force) {                                  /* the BG round the rows only, they cover the rest (#181) */
         lcd_fill(0, Y_GRAPH, 3, H_GRAPH, T_BG);
         lcd_fill(3 + TR_W, Y_GRAPH, 240 - 3 - TR_W, H_GRAPH, T_BG);
         for (c = 0; c < NTRK; c++)
             ts.meter[c] = 0;
-        for (c = 1; c < NTRK; c++) {                 /* the 2 rows between two rows; LINE: a rule on the first */
-            uint32_t y = (uint32_t)(Y_GRAPH + (int32_t)c * TR_PITCH - 2);
+        for (c = 1; c < rows; c++) {                 /* the gap between two rows; LINE: a rule on its first */
+            uint32_t y = (uint32_t)(Y_GRAPH + (int32_t)c * TR_PITCH - (int32_t)gap);
             if (ux.style) {
                 lcd_fill(3, y, TR_W, 1, T_RULE);
                 GFX_HOOK_RULE(3, y, TR_W, 1);
             }
-            lcd_fill(3, ux.style ? y + 1u : y, TR_W, ux.style ? 1u : 2u, T_BG);
+            lcd_fill(3, ux.style ? y + 1u : y, TR_W, ux.style ? gap - 1u : gap, T_BG);
         }
     }
-    if (burger_sample_row) {                         /* scrolled one row down: T2..T4, then SAMPLE */
+    if (tr5) {                                       /* five rows: T1..T4, then SAMPLE, none scrolled away */
+        for (c = 0; c < NTRK; c++)
+            home_track_row(c, c);
+        home_sample_row(NTRK);
+    } else if (burger_sample_row) {                         /* scrolled one row down: T2..T4, then SAMPLE */
         for (c = 1; c < NTRK; c++)
             home_track_row(c, c - 1u);
         home_sample_row(NTRK - 1u);

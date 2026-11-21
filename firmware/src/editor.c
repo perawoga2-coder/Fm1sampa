@@ -157,6 +157,30 @@ static int ed_smp_erase(uint32_t k, uint32_t all)  /* header sector, or the whol
     return rc;
 }
 static int ed_flash_stop(void);
+/* bs13, Burger Studio: what the screen says while a sample comes in (the app or the web editor) and once it is in */
+static void ed_say_slot(const char *what, uint32_t k, uint32_t kib, const char *name)
+{
+    char m[28];
+    uint32_t n = 0, j;
+    while (*what && n < 14u)
+        m[n++] = *what++;
+    m[n++] = ' ';
+    m[n++] = 'U'; m[n++] = 'S'; m[n++] = 'R'; m[n++] = (char)('1' + k);
+    if (name) {                                          /* "USR1 IN: SPOONS" */
+        m[n++] = ':';
+        m[n++] = ' ';
+        for (j = 0; j < 8u && name[j] >= 32 && name[j] < 127; j++)
+            m[n++] = name[j];
+    } else if (kib) {                                    /* "RECEIVING USR1 40 KB" */
+        m[n++] = ' ';
+        if (kib >= 100u) m[n++] = (char)('0' + kib / 100u);
+        if (kib >= 10u) m[n++] = (char)('0' + kib / 10u % 10u);
+        m[n++] = (char)('0' + kib % 10u);
+        m[n++] = ' '; m[n++] = 'K'; m[n++] = 'B';
+    }
+    m[n] = 0;
+    ui_message(m);
+}
 static int ed_smp_end(uint32_t k, const uint8_t *a, uint32_t na)
 {
     const smp_user_hdr_t *h = (const smp_user_hdr_t *)ed_smp_buf;
@@ -690,6 +714,8 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
             }
             if (!rc && fl_write(ed_smp_slot(a[0]) + off, ed_smp_buf, len))
                 rc = 3;
+            if (!rc && !((off + len) & 0x3FFu))           /* bs13: each KiB in, the screen counts it */
+                ed_say_slot("RECEIVING", a[0], (off + len) / 1024u, 0);
         }
         ed_b(a[0]);
         ed_b(off);
@@ -701,10 +727,25 @@ static void ed_handle(const uint8_t *f, uint32_t n)   /* f: the bytes between F0
     case ED_SMP_END:                                       /* slot, pack7 header -> slot, rc */
         if (na < 2u || a[0] >= SMP_USER_SLOTS || !flash_ok)
             return;
-        ed_b(a[0]);
-        ed_b((uint32_t)ed_smp_end(a[0], a + 1, na - 1u));
+        {
+            uint32_t rc = (uint32_t)ed_smp_end(a[0], a + 1, na - 1u);
+            ed_b(a[0]);
+            ed_b(rc);
+            if (!rc) {                                     /* bs13: in. Its name on the screen, the SAMPLE row picked */
+                const smp_user_hdr_t *h = (const smp_user_hdr_t *)smp_user_xip(a[0]);
+                ed_say_slot("IN", a[0], 0, h->name[0] >= 32 && h->name[0] < 127 ? h->name : "SAMPLE");
+                burger_slot_last = (uint8_t)(a[0] + 1u);
+                if (ui.home && home_tracks())
+                    burger_sample_row = 1;
+                ui.force = 1;
+            } else {
+                ed_say_slot("NOT SENT", a[0], 0, 0);
+            }
+        }
         break;
     case ED_BURGER_HELLO:                                  /* Burger Studio's app: -> edition, version; links it */
+        if (!burger_app_link)
+            ui_message("APP CONNECTED");                   /* (bs13: the link, said once) */
         burger_app_link = 1;
         ed_str("BURGER " FELUCCA_VERSION, 24);
         ed_b(1u);                                          /* (what it can: bit 0 SHOW, the REC event) */
