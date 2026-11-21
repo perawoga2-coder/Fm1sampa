@@ -1343,7 +1343,6 @@ static __attribute__((noinline)) void cin_record(void)
  * on its slot (fx.c lane_voice_start: not a track's); a loop of lane_bars bars plays its steps on the first of them
  * only, counted from the bar its recording began in (lane_bar0), so it stays where it was recorded */
 static volatile uint8_t lane_note[16];
-static volatile uint8_t lane_slot;              /* the slot it plays, 0..2 */
 static volatile uint8_t lane_bars = 1;          /* its loop's bars (1, 2) */
 static volatile uint8_t lane_aud;               /* the UI: hear slot lane_aud - 1 once now */
 static uint32_t lane_barn, lane_bar0;           /* bars since PLAY; the bar a recording began in */

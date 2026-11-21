@@ -480,8 +480,10 @@ static const page_t PAGES[] = {
     {"LANES 2", FAM_EDIT, SC_TRACK, GR_NONE, {P_LN4, P_LN5, P_LN6, P_LN7}},
     /* bs14, Burger Studio: SAMPLING, the pages EDIT on HOME's SAMPLE row opens (ui.c burger_smp_page), on the track that
      * plays the slot (a SLICE track, ui_input.c burger_slot_play); SELECT / EDIT go round them and EDIT SAMPLE (SLICES) */
-    {"SAMPLING", FAM_EDIT, SC_TRACK, GR_NONE, {P_LEVEL, P_E3, P_E5, P_E4}},   /* LEVEL PTCH RVRS MODE (ONE GATE LOOP) */
-    {"SAMPLE FX", FAM_EDIT, SC_TRACK, GR_NONE, {P_DLY, P_REV, P_E7, P_E6}},   /* ECHO ROOM TONE DCAY */
+    /* bs18: SAMPLING and SAMPLE FX are track 5's (the SAMPLE row's own voice, fx.c lane_mix), not a track's: their
+     * values are lane_pv (page_desc), set in the settings (ui_input.c lane_page_knob) */
+    {"SAMPLING", FAM_EDIT, SC_TRACK, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}},   /* LVL PTCH MODE (ONE LOOP) USR */
+    {"SAMPLE FX", FAM_EDIT, SC_TRACK, GR_NONE, {0xFF, 0xFF, 0xFF, 0xFF}},  /* ECHO ROOM TONE DCAY */
     {"SLICES", FAM_EDIT, SC_TRACK, GR_SLICES, {0xFF, 0xFF, 0xFF, 0xFF}},   /* SLICE only: the slices by hand (ui_slice.c) */
     {"OPERATOR", FAM_EDIT, SC_TRACK, GR_FMOP, {0xFF, 0xFF, 0xFF, 0xFF}},    /* FM6 only: KNOB 1 the operator, then its */
     {"OP ENV", FAM_EDIT, SC_TRACK, GR_FMENV, {0xFF, 0xFF, 0xFF, 0xFF}},     /* bytes of the track's patch (ui_fm6op.c): */
@@ -519,9 +521,30 @@ static const page_t PAGES[] = {
 #define NPAGES (sizeof(PAGES) / sizeof(PAGES[0]))
 static uint8_t mod_ui_slot;      /* the MOD page: the matrix slot (0..3) KNOB 2..4 edit */
 
+/* bs18: track 5's values on SAMPLING / SAMPLE FX (the ui loads them from the settings each pass) */
+static const char *const N_LANE_MODE[] = {"ONE", "LOOP"};
+static const param_desc_t LANE_PDESC[2][4] = {
+    {{"LVL", F_INT, 0, 127, 100, 0, 0}, {"PTCH", F_SEMI, -24, 24, 0, 0, 0}, {"MODE", F_ENUM, 0, 1, 0, N_LANE_MODE, 0},
+     {"USR", F_INT, 1, 3, 1, 0, 0}},
+    {{"ECHO", F_INT, 0, 127, 0, 0, 0}, {"ROOM", F_INT, 0, 127, 0, 0, 0}, {"TONE", F_INT, 0, 127, 127, 0, 0},
+     {"DCAY", F_INT, 0, 127, 127, 0, 0}},
+};
+static int16_t lane_pv[2][4];
+static int lane_page(const page_t *pg)          /* 1 SAMPLING, 2 SAMPLE FX, 0 another page */
+{
+    const char *t = pg->title;
+    if (t[0] != 'S' || t[1] != 'A' || t[2] != 'M')
+        return 0;
+    return t[6] == ' ' ? 2 : 1;                  /* ("SAMPLE FX" / "SAMPLING") */
+}
 static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **valp)
 {
     uint32_t id = pg->id[slot];
+    if (lane_page(pg)) {
+        uint32_t g = (uint32_t)lane_page(pg) - 1u;
+        *valp = &lane_pv[g][slot & 3u];
+        return &LANE_PDESC[g][slot & 3u];
+    }
     if (id == 0xFFu) {
         *valp = 0;
         return 0;
@@ -537,16 +560,5 @@ static const param_desc_t *page_desc(const page_t *pg, uint32_t slot, int16_t **
     if (pg->graph == GR_MOD)                          /* SRC DST AMT of the slot shown */
         id += 3u * mod_ui_slot;
     *valp = &TSEL->p[id];
-    if (pg->title[0] == 'S' && pg->title[1] == 'A' && pg->title[2] == 'M') {   /* bs14 SAMPLING: words of the app */
-        static param_desc_t sd[4];
-        const param_desc_t *d = track_desc(TSEL, id);
-        const char *lb = id == P_DLY ? "ECHO" : id == P_REV ? "ROOM" : id == P_E5 && d && str_eq(d->label, "REV") ? "RVRS" : 0;
-        if (d && lb) {
-            sd[slot] = *d;
-            sd[slot].label = lb;
-            return &sd[slot];
-        }
-        return d;
-    }
     return track_desc(TSEL, id);
 }

@@ -1119,6 +1119,15 @@ static int param_kept(uint32_t i);
 #define LANE_LVL (favorites.factory[ENGI_SAMPLE][26])     /* LEVEL + 1 (0: 100) */
 #define LANE_FLAGS (favorites.factory[ENGI_SAMPLE][27])   /* bit 0 MUTE */
 #define LANE_MAXB (favorites.factory[ENGI_SAMPLE][28])    /* a first take's bars at most (0: 2) */
+/* bs18: track 5's sound (SAMPLING / SAMPLE FX): the last of SAMPLE's bytes, then DRUM's 8.. (its 9 kits: bytes 0..1) */
+#define LANE_PTCH (favorites.factory[ENGI_SAMPLE][29])    /* PTCH + 64 (0: 0) */
+#define LANE_ECHO (favorites.factory[ENGI_SAMPLE][30])    /* ECHO + 1 (0: 0) */
+#define LANE_ROOM (favorites.factory[ENGI_SAMPLE][31])    /* ROOM + 1 (0: 0) */
+#define LANE_TONE (favorites.factory[ENGI_DRUM][8])       /* TONE + 1 (0: 127) */
+#define LANE_DCAY (favorites.factory[ENGI_DRUM][9])       /* DCAY + 1 (0: 127) */
+#define LANE_MODE (favorites.factory[ENGI_DRUM][10])      /* 0 ONE, 1 LOOP */
+#define LANE_DIV (favorites.factory[ENGI_DRUM][11])       /* the loop's rate: 44.1 kHz / this (0: none recorded) */
+#define LANE_V(b, off, none) ((b) ? (int16_t)((b) - (off)) : (int16_t)(none))
 static int lane_home(void)                       /* HOME, the SAMPLE row picked, five rows (BURGER, not LARGE) */
 {
     return ui.home && burger_sample_row && home_tracks() && ux.burger && !(ui_prefs & PREF_LARGE) && !ui.menu &&

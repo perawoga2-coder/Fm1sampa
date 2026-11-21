@@ -693,6 +693,43 @@ static void lane_sync(void)                             /* every pass: the seque
     lane_bars = (uint8_t)(LANE_LBARS ? LANE_LBARS : 1u);
     lane_lvl = (int16_t)(LANE_LVL ? LANE_LVL - 1 : 100);
     lane_mute = (uint8_t)(LANE_FLAGS & 1u);
+    lane_ptch = LANE_V(LANE_PTCH, 64, 0);              /* (bs18: track 5's sound) */
+    lane_echo = LANE_V(LANE_ECHO, 1, 0);
+    lane_room = LANE_V(LANE_ROOM, 1, 0);
+    lane_tone = LANE_V(LANE_TONE, 1, 127);
+    lane_dcay = LANE_V(LANE_DCAY, 1, 127);
+    lane_mode = (uint8_t)(LANE_MODE & 1u);
+    lane_pv[0][0] = lane_lvl;                           /* (what SAMPLING / SAMPLE FX show) */
+    lane_pv[0][1] = lane_ptch;
+    lane_pv[0][2] = lane_mode;
+    lane_pv[0][3] = (int16_t)(lane_slot + 1u);
+    lane_pv[1][0] = lane_echo;
+    lane_pv[1][1] = lane_room;
+    lane_pv[1][2] = lane_tone;
+    lane_pv[1][3] = lane_dcay;
+}
+/* bs18: a knob on SAMPLING / SAMPLE FX: track 5's value, into the settings */
+static void lane_page_knob(uint32_t g, uint32_t k, int32_t st)
+{
+    const param_desc_t *d = &LANE_PDESC[g][k & 3u];
+    int32_t v = clamp(lane_pv[g][k & 3u] + st, d->min, d->max);
+    if (g == 0u) {
+        if (k == 0u) LANE_LVL = (uint8_t)(v + 1);
+        else if (k == 1u) LANE_PTCH = (uint8_t)(v + 64);
+        else if (k == 2u) LANE_MODE = (uint8_t)v;
+        else {
+            LANE_SLOT = (uint8_t)v;
+            burger_slot_last = (uint8_t)v;
+        }
+    } else {
+        if (k == 0u) LANE_ECHO = (uint8_t)(v + 1);
+        else if (k == 1u) LANE_ROOM = (uint8_t)(v + 1);
+        else if (k == 2u) LANE_TONE = (uint8_t)(v + 1);
+        else LANE_DCAY = (uint8_t)(v + 1);
+    }
+    lane_pv[g][k & 3u] = (int16_t)v;
+    settings_later();
+    ui.force = 1;
 }
 static void lane_keys(uint32_t pressed)
 {
@@ -766,16 +803,19 @@ static void looper_tap(void)
     }
     if (bnc_state != BNC_IDLE)
         return;
-    lp.dub = LANE_LBARS != 0u;                          /* a loop is there: a layer as long as it */
-    mb = lp.dub ? LANE_LBARS : (LANE_MAXB == 1u ? 1u : 2u);
+    lp.dub = LANE_LBARS != 0u && LANE_DIV != 0u && usr_nz[(LANE_SLOT >= 1u && LANE_SLOT <= 3u ? LANE_SLOT : 1u) - 1u];
+    mb = lp.dub ? LANE_LBARS : (LANE_MAXB == 1u ? 1u : 2u);   /* (a loop there: a layer as long as it, at its rate) */
     bar = (uint32_t)FS * 240u / bpm;                    /* (samples in a 4/4 bar) */
     need = bar * mb;
     for (d = 2u; d < 6u && need / d > 2u * BNC_BYTES; d++)
         ;
-    while (mb > 1u && need / d > 2u * BNC_BYTES) {      /* too slow for two bars even at the lowest rate */
+    while (!lp.dub && mb > 1u && need / d > 2u * BNC_BYTES) {   /* too slow for two bars even at the lowest rate */
         mb--;
         need = bar * mb;
     }
+    if (lp.dub)
+        d = LANE_DIV;
+    bnc_dub = (uint8_t)(lp.dub ? (LANE_SLOT >= 1u && LANE_SLOT <= 3u ? LANE_SLOT : 1u) : 0u);
     bnc_div = (uint8_t)d;
     bnc_bars_max = (uint8_t)mb;
     bnc_stop = 0;
@@ -812,6 +852,7 @@ static void looper_clear(void)
     for (i = 0; i < 16u; i++)
         LANE_B[i] = 0;
     LANE_LBARS = 0;
+    LANE_DIV = 0;
     lp.nh = 0;
     lp.layer = 0;
     lane_release();
@@ -845,8 +886,10 @@ static void looper_poll(void)                           /* every pass */
             if (lp.nh < 2u)
                 lp.nh++;
         }
-        if (!lp.dub)
+        if (!lp.dub) {
             LANE_LBARS = (uint8_t)bars;
+            LANE_DIV = bnc_div;                         /* (its layers keep this rate) */
+        }
         LANE_SLOT = (uint8_t)(k + 1u);
         burger_slot_last = LANE_SLOT;
         for (i = 0; i < 16u; i++)
@@ -1155,6 +1198,12 @@ static void edit_param(uint32_t slot, int32_t steps)
     const page_t *pg = cur_page();
     const param_desc_t *d;
     int32_t v;
+#if FELUCCA_SLICE
+    if (lane_page(pg)) {                                  /* bs18: SAMPLING / SAMPLE FX: track 5's */
+        lane_page_knob((uint32_t)lane_page(pg) - 1u, slot, steps);
+        return;
+    }
+#endif
     if (pg->graph == GR_EVENTS) {                         /* AUTOMATION (ui_events.c) */
         ev_knob(slot, steps);
         return;

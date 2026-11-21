@@ -759,10 +759,16 @@ static int test_sampling_pages(void)
         for (k = 0; k < NPAGES && !str_eq(PAGES[k].title, "SAMPLE FX"); k++)
             ;
         d = page_desc(&PAGES[k], 0, &vp);
-        ok = d && str_eq(d->label, "ECHO") && vp == &TSEL->p[P_DLY];
+        ok = d && str_eq(d->label, "ECHO") && vp == &lane_pv[1][0];
         d = page_desc(&PAGES[k], 1, &vp);
-        ok &= d && str_eq(d->label, "ROOM") && vp == &TSEL->p[P_REV];
-        bad += check("bs14 SAMPLE FX: ECHO and ROOM are the track's DLY and REV sends", ok);
+        ok &= d && str_eq(d->label, "ROOM") && vp == &lane_pv[1][1];
+        bad += check("bs18 SAMPLE FX: ECHO and ROOM are track 5's own (not a track's sends)", ok);
+        LANE_ECHO = 0;
+        press(B_EDIT); frames(320);                       /* SAMPLE FX */
+        turn(EN_K1, 1); turn(EN_K1, 1); frame();
+        ok = str_eq(cur_page()->title, "SAMPLE FX") && lane_echo == 2 && LANE_ECHO == 3u && TSEL->p[P_DLY] == 0;
+        bad += check("bs18 SAMPLE FX KNOB 1: track 5's ECHO (the settings, the voice), no track's DLY moved", ok);
+        LANE_ECHO = 0;
     }
     go_home(); frame();
     bad += check("bs14 HOME leaves SAMPLING (EDIT is the track's EDIT pages again)", burger_slot_edit == 0u);
@@ -863,6 +869,8 @@ static int test_looper(void)
     ok &= bnc_state == BNC_IDLE && host_bounce_k == 1u && LANE_SLOT == 2u && LANE_LBARS == 1u && LANE_B[0] == LANE_NOTE;
     bad += check("bs16 tap again: stops at the bar's end; the 1-bar loop into USR2, the row plays it on step 1", ok);
     press(B_SAVE); frames(480);
+    ok = bnc_dub == 2u && bnc_div == LANE_DIV && LANE_DIV != 0u && bnc_bars_max == 1u;
+    bad += check("bs18 a layer goes onto the loop (USR2 read along), at the loop's rate and length", ok);
     lane_bar_now();
     bnc_n = 30000u;
     lane_bar_now();                                   /* a layer: as long as the loop (1 bar), ends by itself */
