@@ -1562,6 +1562,44 @@ static void burger_slot_play(void)
 #endif
 
 /* messages of things that happened elsewhere (a load, the editor, MIDI in): after this frame's own */
+/* bs15, Burger Studio: CLK USB follows the app's tempo; once the USB cable is out (the bus idle for 1.5 s), CLK goes to
+ * INT by itself, so PLAY works with nothing plugged in (it used to say NO CLOCK until CLK was turned to INT by hand).
+ * Plugged in again (the bus up for 1 s): back to USB, if it was the cable that set it to INT. The app's link is said
+ * again then (APP CONNECTED) */
+static struct {
+    uint8_t auto_int, was_up;                           /* 1: INT because the cable went, USB when it is back; */
+    uint32_t t_off, t_on;                               /* .. the bus has been up (a cable that goes, not none) */
+} clku;
+static void clk_usb_follow(void)
+{
+    uint32_t up = usb.config && !usb.suspended, now = fm1_ms;
+    if (!up) {
+        clku.t_on = 0;
+        if (!clku.t_off)
+            clku.t_off = now | 1u;
+        if (clku.was_up && song.g[G_CLOCK] == 1 && (int32_t)(now - clku.t_off) > 1500) {
+            clku.was_up = 0;
+            song.g[G_CLOCK] = 0;
+            clku.auto_int = 1;
+            burger_app_link = 0;
+            ui_message("USB OUT: CLK INT");
+            ui.force = 1;
+        }
+    } else {
+        clku.t_off = 0;
+        clku.was_up = 1;
+        if (!clku.t_on)
+            clku.t_on = now | 1u;
+        if (clku.auto_int && (int32_t)(now - clku.t_on) > 1000) {
+            clku.auto_int = 0;
+            if (song.g[G_CLOCK] == 0) {                 /* (turned by hand meanwhile: left as it is) */
+                song.g[G_CLOCK] = 1;
+                ui_message("USB IN: CLK USB");
+                ui.force = 1;
+            }
+        }
+    }
+}
 static void ui_notices(void)
 {
     static uint32_t midi_t, midi_last;
@@ -1612,6 +1650,7 @@ static void ui_input(void)
     settings_later_poll();                              /* (#197: LIST / FAV written once the view is left or idle) */
     follow_poll();                                      /* (1.6, #242: SEQ's roll follows the play position) */
     take_poll();                                        /* (bs12: UNDO TAKE, each pass recorded) */
+    clk_usb_follow();                                   /* (bs15: CLK USB -> INT with the cable out, and back) */
     if (scr_input(pressed, notes))                      /* MENU > SCREEN OFF: dark, or the wake gesture: swallowed */
         return;                                         /* (before the buttons' timers: no tap or hold after it) */
     if (mom.n && !mom_down()) {                         /* MOMENTARY: LFO let go (or the menu, a layer ..): back */

@@ -152,6 +152,7 @@ static struct { uint32_t stage; } felucca_dbg;
 #include "../firmware/src/icons.c"
 #include "../firmware/src/ui_graph.c"
 #include "../firmware/src/ui_draw.c"
+static void burger_app_rec(void) {}              /* (editor.c on the device: not in this build) */
 #include "../firmware/src/ui_menu.c"
 #include "../firmware/src/ui_input.c"
 #include "../firmware/src/ui_layer.c"
@@ -184,6 +185,7 @@ static void ui_power_on(void)
     ml_off();                                     /* (MIDI LEARN off, nothing learned) */
     memset(&undo, 0, sizeof undo);
     memset(&tk, 0, sizeof tk);                    /* (bs12: no takes kept) */
+    memset(&clku, 0, sizeof clku);                /* (bs15: no cable seen) */
     fop_op = fop_stg = 0;                         /* (FM6's operator pages: OP 1, stage 1, as at power-on) */
     memset(pat_last, 0, sizeof pat_last);
     memset(pat_from, 0, sizeof pat_from);                /* (the header's slot letter: none) */
@@ -757,6 +759,31 @@ static int test_sampling_pages(void)
     memset(host_slots, 0, sizeof host_slots);        /* (the other tests: empty slots) */
     smp_user_scan(0); smp_user_scan(1); smp_user_scan(2);
     burger_sample_row = 0;
+    return bad;
+}
+
+/* bs15: CLK USB, the cable out: INT by itself (PLAY works unplugged); the cable back: USB again */
+static int test_clk_usb_follow(void)
+{
+    int bad = 0, ok;
+    ui_power_on();
+    go_home(); frame();
+    song.g[G_CLOCK] = 1;
+    usb.config = 1; usb.suspended = 0; frames(1200);
+    ok = song.g[G_CLOCK] == 1;
+    usb.suspended = 1; frames(800);
+    ok &= song.g[G_CLOCK] == 1;                   /* (a short idle: nothing yet) */
+    frames(1200);
+    ok &= song.g[G_CLOCK] == 0 && str_eq(ui.msg, "USB OUT: CLK INT");   /* (said; its time may be up) */
+    bad += check("bs15 CLK USB, the cable out 1.5 s: CLK INT, said", ok);
+    usb.suspended = 0; frames(1500);
+    bad += check("bs15 the cable back: CLK USB again", song.g[G_CLOCK] == 1 && str_eq(ui.msg, "USB IN: CLK USB"));
+    usb.suspended = 1; frames(2000);
+    song.g[G_CLOCK] = 2;                          /* TRS by hand while unplugged: left as it is */
+    usb.suspended = 0; frames(1500);
+    bad += check("bs15 CLK turned by hand meanwhile: the cable back leaves it", song.g[G_CLOCK] == 2);
+    song.g[G_CLOCK] = 0;
+    usb.config = 0; usb.suspended = 0; frames(100);
     return bad;
 }
 
@@ -10141,6 +10168,7 @@ int main(void)
     bad += test_rec();
     bad += test_takes();
     bad += test_sampling_pages();
+    bad += test_clk_usb_follow();
     bad += test_step_rec();
     bad += test_step_rec();
     bad += test_step_preview_chord_entry();
