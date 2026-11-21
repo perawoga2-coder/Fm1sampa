@@ -181,6 +181,58 @@ static void ed_say_slot(const char *what, uint32_t k, uint32_t kib, const char *
     m[n] = 0;
     ui_message(m);
 }
+/* bs16, Burger Studio: the looper's take (fx.c bnc_buf: n IMA ADPCM samples at 44.1 kHz / div) into slot k, as an
+ * upload would leave it: the slot let go and erased as far as the take reaches, the data, then the header (one zone over
+ * the keyboard, root C4, not looped; named LAYER n), checked by its CRC and scanned. The transport runs on: each erase
+ * holds the audio for its few ms (the IRQs off, the buffer silent: storage_hw.c) - a short gap, the music goes on. 0: in */
+static int burger_bounce_write(uint32_t k, uint32_t n, uint32_t div, uint32_t layer)
+{
+    static smp_user_hdr_t h;
+    uint32_t bytes = (n + 1u) / 2u, end = SMP_USER_DATA + bytes, i, took, off;
+    int rc;
+    if (k >= SMP_USER_SLOTS || !flash_ok || end > SMP_USER_SIZE - 0x1000u || !div)
+        return 1;
+    rc = ed_smp_erase(k, 0);                         /* (its voices end; the header's sector) */
+    for (i = 0x1000u; !rc && i < end; i += 0x1000u) {
+        audio_silence();
+        rc = fl_erase4k(ed_smp_slot(k) + i, &took);
+        fm1_wdt_feed();
+    }
+    for (off = 0; !rc && off < bytes; off += 256u) {
+        uint32_t len = bytes - off < 256u ? bytes - off : 256u;
+        rc = fl_write(ed_smp_slot(k) + SMP_USER_DATA + off, bnc_buf + off, len) ? 3 : 0;
+        fm1_wdt_feed();
+    }
+    if (rc)
+        return rc;
+    ed_smp_inval(k);
+    memset(&h, 0, sizeof h);
+    h.magic = SMP_USER_MAGIC;
+    h.version = 1;
+    h.nz = 1;
+    memcpy(h.name, "LAYER   ", 8);
+    if (layer >= 10u) {
+        h.name[6] = (char)('0' + layer / 10u % 10u);
+        h.name[7] = (char)('0' + layer % 10u);
+    } else {
+        h.name[6] = (char)('0' + layer);
+    }
+    h.data_len = bytes;
+    h.crc = st_crc32(smp_user_xip(k) + SMP_USER_DATA, bytes);
+    h.zone[0].off = 0;
+    h.zone[0].n = n;
+    h.zone[0].ls = 0;
+    h.zone[0].le = n - 1u;
+    h.zone[0].rate = 65536u / div;
+    h.zone[0].root16 = 60 * 16;
+    h.zone[0].hi = 127;
+    if (fl_write(ed_smp_slot(k), (const uint8_t *)&h, sizeof h))
+        return 4;
+    ed_smp_inval(k);
+    smp_user_scan(k);
+    return usr_nz[k] ? 0 : 5;
+}
+
 static int ed_smp_end(uint32_t k, const uint8_t *a, uint32_t na)
 {
     const smp_user_hdr_t *h = (const smp_user_hdr_t *)ed_smp_buf;

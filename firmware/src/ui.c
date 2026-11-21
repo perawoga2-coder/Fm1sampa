@@ -1112,7 +1112,31 @@ static int param_kept(uint32_t i);
  * kept in the settings: favorites.factory[ENGI_SAMPLE][8..23], a note a step (0: none). SAMPLE has 4 presets, its
  * favourites take byte 0; bytes 8.. no firmware wrote before (all 0 in an older setting: no steps) */
 #define LANE_B (&favorites.factory[ENGI_SAMPLE][8])
-#define LANE_NOTE 60u                            /* a step's note: the slot's first slice / the sample at its pitch */
+#define LANE_NOTE 60u                            /* a step's note (any non-zero: the row plays its slot from the start) */
+/* bs16: the row's loop and voice, bytes after its steps (all 0 in an older setting: as bs17 had it) */
+#define LANE_LBARS (favorites.factory[ENGI_SAMPLE][24])   /* its loop's bars (0: no loop recorded, 1, 2) */
+#define LANE_SLOT (favorites.factory[ENGI_SAMPLE][25])    /* the slot it plays + 1 (0: USR1) */
+#define LANE_LVL (favorites.factory[ENGI_SAMPLE][26])     /* LEVEL + 1 (0: 100) */
+#define LANE_FLAGS (favorites.factory[ENGI_SAMPLE][27])   /* bit 0 MUTE */
+#define LANE_MAXB (favorites.factory[ENGI_SAMPLE][28])    /* a first take's bars at most (0: 2) */
+static int lane_home(void)                       /* HOME, the SAMPLE row picked, five rows (BURGER, not LARGE) */
+{
+    return ui.home && burger_sample_row && home_tracks() && ux.burger && !(ui_prefs & PREF_LARGE) && !ui.menu &&
+           !ui.confirm && !ui.layer;
+}
+/* HOME's four knobs on the SAMPLE row: the row's LEVEL, MUTE, a first take's BARS, the USR slot it plays */
+static const param_desc_t LANE_DESC[4] = {
+    {"LEVEL", F_INT, 0, 127, 100, 0, 0}, {"MUTE", F_ONOFF, 0, 1, 0, 0, 0},
+    {"BARS", F_INT, 1, 2, 2, 0, 0}, {"USR", F_INT, 1, 3, 1, 0, 0},
+};
+static int16_t lane_kv[4];
+static void lane_kv_load(void)
+{
+    lane_kv[0] = (int16_t)(LANE_LVL ? LANE_LVL - 1 : 100);
+    lane_kv[1] = (int16_t)(LANE_FLAGS & 1u);
+    lane_kv[2] = (int16_t)(LANE_MAXB == 1u ? 1 : 2);
+    lane_kv[3] = (int16_t)(LANE_SLOT >= 1u && LANE_SLOT <= 3u ? LANE_SLOT : 1);
+}
 
 /* bs12, Burger Studio: UNDO TAKE, for layering by ear. Each pass recorded live into the selected track (it armed,
  * the transport running, no song chain) that changed its steps is a take: the steps as that pass began are kept,
@@ -1868,6 +1892,13 @@ static uint32_t preset_visible(uint32_t cur, uint32_t total, uint32_t row)
 static track_t *home_trk(uint32_t k) { return home_levels() ? &trk[k & 3u] : TSEL; }
 static const param_desc_t *home_param(uint32_t k, int16_t **vp)
 {
+#if FELUCCA_SLICE
+    if (lane_home()) {                           /* (bs16: the SAMPLE row's own four) */
+        lane_kv_load();
+        *vp = &lane_kv[k & 3u];
+        return &LANE_DESC[k & 3u];
+    }
+#endif
     uint32_t id = home_levels() ? (uint32_t)P_LEVEL : ENGINES[TSEL->eng_req % NENGINES]->knob[k & 3u];
     *vp = &home_trk(k)->p[id];
     return track_desc(home_trk(k), id);

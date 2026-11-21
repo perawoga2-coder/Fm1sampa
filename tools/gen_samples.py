@@ -105,6 +105,11 @@ FELUCCA_BREAK_HITS = [(0, "kick", 1.0), (0, "chh", 0.55), (2, "kick", 0.7), (2, 
               (10, "kick", 0.9), (10, "ohh", 0.4), (12, "snare", 1.0), (12, "chh", 0.45), (14, "chh", 0.4),
               (14, "snare", 0.35)]
 BREAK_HITS = BURGER_BREAK_HITS if BURGER_KIT.is_dir() else FELUCCA_BREAK_HITS
+# Burger Studio (bs16): SLICE's ROCK LIVE, Burger Studio's own Rock kit (assets/burger-kit) one hit a slice, a key
+# each from the lowest: (file, seconds kept). Cut short to fit the flash (about 46 KB of ADPCM at TR)
+ROCK_HITS = [("Rock Kick", 0.40), ("Rock Snare", 0.40), ("Rock Hat Closed", 0.12), ("Rock Hat Open", 0.40),
+             ("Rock Tom High", 0.40), ("Rock Tom Mid", 0.42), ("Rock Tom Floor", 0.50), ("Rock Crash", 0.70),
+             ("Rock Ride", 0.55), ("Rock Snare Crack", 0.30)]
 SLC_PIANO_NOTE = 60                          # SLICE's SRC PIANO: the PIANO zone of this root (middle C)
 SLC_GRID, SLC_AUTO = 128, 32                # eng_slice.c slc_src_t
 
@@ -275,12 +280,33 @@ def break_loop():
     return [int(v * 30000 / pk) for v in x], sorted({pos[s] for s, _, _ in BREAK_HITS})
 
 
+def rock_kit():
+    """SLICE's ROCK LIVE: ROCK_HITS one after the other at TR -> (int16 samples, hit starts); None without the kit"""
+    if not BURGER_KIT.is_dir():
+        return None
+    x, starts = [], []
+    for name, keep in ROCK_HITS:
+        sr, h = wav(BURGER_KIT / f"{name}.wav")
+        h = resample(h[max(0, onset(h) - 16):], sr, TR)[:int(keep * TR)]
+        pk = peak(h)
+        end = len(h)
+        while end > 64 and abs(h[end - 1]) < 0.004 * pk:   # the silent tail dropped
+            end -= 1
+        h = h[:end]
+        cos_fade(h, min(len(h) // 3, int(0.06 * TR)))
+        starts.append(len(x))
+        x += [v * 30000 / pk for v in h]
+        x += [0.0] * 32                              # (a few silent samples: the slice ends clean)
+    return [int(v) for v in x], starts
+
+
 class Builder:
     def __init__(self):
         self.zones, self.sets, self.blob, self.kinds = [], [], bytearray(), {}
         self.alias = {}                         # set index -> the set index it aliases
         self.brk = None
         self.pno = None
+        self.rck = None
 
     def slice_break(self):
         """SLICE's BREAK, after every set; its slice table: decoder states at k * len / SLC_GRID, the hits"""
@@ -291,6 +317,18 @@ class Builder:
         grid = ima_states(data, [k * n // SLC_GRID for k in range(SLC_GRID)])
         hits = hits[:SLC_AUTO]
         self.brk = dict(off=off, n=n, grid=grid, apos=hits, ast=ima_states(data, hits))
+
+    def slice_rock(self):
+        """SLICE's ROCK LIVE (bs16): the kit's hits in a row, each an AUTO slice"""
+        r = rock_kit()
+        if not r:
+            return
+        x, hits = r
+        off, _ = self.add(x, 0)
+        n = len(x)
+        data = self.blob[off:off + (n + 1) // 2]
+        grid = ima_states(data, [k * n // SLC_GRID for k in range(SLC_GRID)])
+        self.rck = dict(off=off, n=n, grid=grid, apos=hits, ast=ima_states(data, hits))
 
     def slice_piano(self):
         """SLICE's PIANO: the PIANO set's SLC_PIANO_NOTE zone (its data, no copy); its slice table: decoder states
@@ -393,6 +431,7 @@ class Builder:
         L.append("static const char *const SMP_SET_NAMES[] = {" + names + "};")
         L += self.break_header()
         L += self.piano_header()
+        L += self.rock_header()
         return "\n".join(L) + "\n"
 
     @staticmethod
@@ -424,10 +463,19 @@ class Builder:
         return ["", f"/* SLICE's PIANO: the PIANO zone of MIDI {SLC_PIANO_NOTE} ({b['n']} samples at SMP_DATA[{b['off']}]) */",
                 f"#define SLC_PIANO_NOTE {SLC_PIANO_NOTE}"] + self.slc_init("SLC_PIANO_INIT", b)
 
+    def rock_header(self):
+        """SLC_ROCK_INIT: SLICE's ROCK LIVE ({0}: none, no assets/burger-kit)"""
+        b = self.rck
+        if not b:
+            return ["#define SLC_ROCK_INIT {0}"]
+        return ["", f"/* SLICE's ROCK LIVE: {len(b['apos'])} hits of Burger Studio's Rock kit, one a slice */"] + \
+            self.slc_init("SLC_ROCK_INIT", b)
+
     def summary(self):
         brk = f", SLICE BREAK {self.brk['n']} samples" if self.brk else ""
         own = self.pno and not any(z["off"] == self.pno["off"] for z in self.zones)
         brk += f", SLICE PIANO ({'own copy' if own else 'shared'}) {self.pno['n']} samples" if self.pno else ""
+        brk += f", SLICE ROCK LIVE {self.rck['n']} samples" if self.rck else ""
         return f"samples: {len(self.sets)} sets, {len(self.zones)} zones, {len(self.blob)} B ADPCM{brk}"
 
 
@@ -476,6 +524,7 @@ def main(out):
     if slice_on():                                  # SLICE's BREAK: only when that engine is built
         b.slice_break()                             # last: the sets' offsets stay as they were
         b.slice_piano()                             # (no data of its own: the PIANO set's)
+        b.slice_rock()                              # (bs16: after BREAK, so its offset stays too)
     text = b.header()
     Path(out).write_text(text)
     CACHE.parent.mkdir(parents=True, exist_ok=True)

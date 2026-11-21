@@ -60,13 +60,15 @@ typedef struct {
 
 static const slc_src_t SLC_BREAK = SLC_BREAK_INIT;
 static const slc_src_t SLC_PIANO = SLC_PIANO_INIT;
+static const slc_src_t SLC_ROCK = SLC_ROCK_INIT;     /* bs16, Burger Studio: ROCK LIVE, a drum hit a slice */
 static slc_src_t slc_usr[SMP_USER_SLOTS];
 typedef int16_t slc_rbuf_t[NVOICE][SLC_RB];           /* reverse windows, one per part voice (the part's eng_mem) */
 ENG_MEM_FITS("SLICE", sizeof(slc_rbuf_t));
 /* append-only: stored sounds keep their SRC numbers (1.0.4 added PIANO) */
-static const char *const N_SLC_SRC[] = {"BREAK", "USR1", "USR2", "USR3", "PIANO"};
+static const char *const N_SLC_SRC[] = {"BREAK", "USR1", "USR2", "USR3", "PIANO", "ROCK"};
 #define SLC_SRC_PIANO 4u
-#define SLC_NSRC 5
+#define SLC_SRC_ROCK 5u                  /* bs16 (appended) */
+#define SLC_NSRC 6
 #define SLC_SINE 7u                  /* a voice's source when it has no material: the sine */
 static const char *const N_SLC_DIV[] = {"4", "8", "16", "32", "AUTO", "MAN"};
 static const char *const N_SLC_MODE[] = {"ONE", "GATE", "LOOP"};
@@ -89,7 +91,7 @@ static volatile uint8_t slc_man_cur[SMP_USER_SLOTS];
 static void (*slc_man_load)(uint32_t k);        /* slice_store.c: a slot was read (smp_user_scan): its stored slices */
 static uint8_t slc_man_save;                     /* bit k: slot k's slices changed, to flash (slice_store.c) */
 
-/* the SRC of a part's sound (0..4: a stored value out of range reads as the nearest) */
+/* the SRC of a part's sound (0..5: a stored value out of range reads as the nearest) */
 static uint32_t slc_src_of(const int16_t *p) { return (uint32_t)clamp(p[P_E0], 0, SLC_NSRC - 1); }
 /* source 0 = BREAK, 1..3 = USR1..3, 4 = PIANO; 0 = no material (an empty or erased slot, no PIANO in the build) */
 static const slc_src_t *slc_get(uint32_t src)
@@ -98,6 +100,8 @@ static const slc_src_t *slc_get(uint32_t src)
         return SLC_BREAK.len ? &SLC_BREAK : 0;
     if (src == SLC_SRC_PIANO)
         return SLC_PIANO.len ? &SLC_PIANO : 0;
+    if (src == SLC_SRC_ROCK)
+        return SLC_ROCK.len ? &SLC_ROCK : 0;
     src--;
     return src < SMP_USER_SLOTS && usr_nz[src] && slc_usr[src].len ? &slc_usr[src] : 0;
 }
@@ -614,6 +618,9 @@ static void slice_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
 static const preset_t SLICE_PRESETS[] = {
     {"CHOP", {0, 2, 0, 0, SLC_ONE, 0, 127, 127}, {0, 127, 127, 30}, 0, 0, FX(0, 0, 0, 12), PAT(9)},
     {"STUTTER", {0, 1, 0, 0, SLC_GATE, 0, 90, 110}, {0, 127, 127, 12}, 0, 0, FX(10, 0, 20, 10), PAT(10)},
+    /* bs16, Burger Studio: ROCK LIVE, the Rock kit's hits from the lowest key: KICK SNARE HAT HAT-OPEN TOM-HI TOM-MID
+     * TOM-FLOOR CRASH RIDE CRACK (AUTO: a slice a hit; ONE: each rings out) */
+    {"ROCK LIVE", {SLC_SRC_ROCK, SLC_DIV_AUTO, 0, 0, SLC_ONE, 0, 127, 127}, {0, 127, 127, 30}, 0, 0, FX(0, 0, 0, 14), 0},
 };
 
 /* the lowest key is slice 0 (C4 + ROOT), no scale */

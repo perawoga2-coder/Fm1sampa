@@ -1055,6 +1055,121 @@ static uint32_t mix_split(void)
 }
 #endif
 
+/* ---- bs16, Burger Studio: the SAMPLE row's own voice and the looper's recorder (audio ISR) ----
+ * The row plays a user slot's first zone, one shot at its own rate, straight into the mix (not through a track: muting or
+ * lowering tracks 1..4 never touches it), at its own LEVEL / MUTE (ui: the settings). The recorder takes the mix before
+ * MASTER (as the scope's MIX: the row and every track, their sends' returns; not the click), mono, averaged down by
+ * bnc_div (44.1 kHz / 2 .. 6), as IMA ADPCM into RAM; from bar to bar (seq.c click_tick: bnc_bar); the main loop writes
+ * it into a slot once it is done (editor.c burger_bounce_write) */
+static voice_t lane_v;
+static volatile int16_t lane_lvl = 100;          /* LEVEL 0..127 */
+static volatile uint8_t lane_mute;
+static void lane_voice_start(uint32_t k)        /* slot k (0..2) from its start; an empty slot: nothing */
+{
+    if (k >= SMP_USER_SLOTS || !usr_nz[k]) {
+        lane_v.active = 0;
+        return;
+    }
+    lane_v.s[4] = (int32_t)(0x8000u | k << 5);
+    lane_v.ph[0] = lane_v.ph[1] = 0;
+    lane_v.s[0] = lane_v.s[1] = lane_v.s[2] = lane_v.s[3] = 0;
+    lane_v.active = 1;
+}
+static void lane_mix(uint32_t n)
+{
+    const smp_zone_t *z;
+    uint32_t i, frac, stepq;
+    int32_t lvl;
+    if (!lane_v.active)
+        return;
+    z = smp_zone((uint32_t)lane_v.s[4]);
+    if (!z->n || !usr_nz[((uint32_t)lane_v.s[4] >> 5) & 3u]) {   /* (the slot rewritten under it) */
+        lane_v.active = 0;
+        return;
+    }
+    stepq = z->rate & ~0xFFu;                   /* at its root: the sample's own rate (Q16 per output sample) */
+    lvl = lane_mute ? 0 : LEVEL_Q12[lane_lvl & 127];
+    frac = lane_v.ph[1];
+    if (!lane_v.ph[0] && !frac && !lane_v.s[3])
+        lane_v.s[3] = sample_next(z, &lane_v, 0);
+    for (i = 0; i < n; i++) {
+        int32_t x;
+        frac += stepq;
+        while (frac >= 65536u) {
+            frac -= 65536u;
+            lane_v.s[2] = lane_v.s[3];
+            if (lane_v.ph[0] >= z->n) {
+                lane_v.active = 0;
+                break;
+            }
+            lane_v.s[3] = sample_next(z, &lane_v, 0);
+        }
+        if (!lane_v.active)
+            break;
+        x = lane_v.s[2] + (((lane_v.s[3] - lane_v.s[2]) * (int32_t)(frac >> 1)) >> 15);
+        x = ((x >> 1) * lvl) >> 10;              /* (as mix_part: a voice's 2 x, LEVEL Q12) */
+        mix_l[i] += x;
+        mix_r[i] += x;
+    }
+    lane_v.ph[1] = frac;
+}
+
+#define BNC_BYTES 28672u                         /* 57,344 ADPCM samples */
+static uint8_t bnc_buf[BNC_BYTES] __attribute__((section(".pool")));
+enum { BNC_IDLE, BNC_ARM, BNC_REC, BNC_DONE };
+static volatile uint8_t bnc_state, bnc_stop;     /* bnc_stop: end at the next bar */
+static volatile uint8_t bnc_bars_max, bnc_bars;  /* the take's bars at most; bars recorded */
+static volatile uint8_t bnc_div = 4;
+static volatile uint32_t bnc_n;                  /* samples encoded */
+static int32_t bnc_acc, bnc_pred, bnc_idx;
+static uint32_t bnc_cnt;
+static void bnc_bar(void)                        /* seq.c: a bar begins (the click's step 1) */
+{
+    if (bnc_state == BNC_ARM) {
+        bnc_n = 0;
+        bnc_acc = bnc_pred = bnc_idx = 0;
+        bnc_cnt = 0;
+        bnc_bars = 0;
+        bnc_state = BNC_REC;
+    } else if (bnc_state == BNC_REC) {
+        bnc_bars++;
+        if (bnc_bars >= bnc_bars_max || bnc_stop)
+            bnc_state = BNC_DONE;
+    }
+}
+static __attribute__((noinline)) void bnc_take(uint32_t n)
+{
+    uint32_t i, d = bnc_div;
+    for (i = 0; i < n; i++) {
+        bnc_acc += clamp(((mix_l[i] + mix_r[i]) >> 1) + wet[i], -32767, 32767);
+        if (++bnc_cnt < d)
+            continue;
+        {
+            int32_t x = bnc_acc / (int32_t)d, step = IMA_STEP[bnc_idx], diff = x - bnc_pred, vd = step >> 3;
+            uint32_t code = 0;
+            bnc_acc = 0;
+            bnc_cnt = 0;
+            if (diff < 0) {
+                code = 8;
+                diff = -diff;
+            }
+            if (diff >= step) { code |= 4; diff -= step; vd += step; }
+            if (diff >= step >> 1) { code |= 2; diff -= step >> 1; vd += step >> 1; }
+            if (diff >= step >> 2) { code |= 1; vd += step >> 2; }
+            bnc_pred = clamp(bnc_pred + ((code & 8u) ? -vd : vd), -32768, 32767);
+            bnc_idx = clamp(bnc_idx + IMA_IDX[code & 7u], 0, 88);
+            if (bnc_n & 1u)
+                bnc_buf[bnc_n >> 1] |= (uint8_t)(code << 4);
+            else
+                bnc_buf[bnc_n >> 1] = (uint8_t)code;
+            if (++bnc_n >= 2u * BNC_BYTES) {     /* full: the take ends here */
+                bnc_state = BNC_DONE;
+                return;
+            }
+        }
+    }
+}
+
 static void mix_block(int32_t *out, uint32_t n)
 {
     uint32_t i;
@@ -1090,6 +1205,7 @@ static void mix_block(int32_t *out, uint32_t n)
     for (i = 0; i < NPART; i++)                         /* (one core: as 1.6) */
         mix_part(&trk[i], n);
 #endif
+    lane_mix(n);                                        /* (bs16: the SAMPLE row's voice, its own LEVEL) */
     if (perf)
         perf_pre(mix_l, mix_r, send_d, send_r, n);
     fx_buses(send_c, send_d, send_r, wet, n);
@@ -1097,6 +1213,8 @@ static void mix_block(int32_t *out, uint32_t n)
         rev_side_mix(mix_l, mix_r, n);                  /* HALL: stereo */
     if (scope_mix)
         scope_take_mix(n);
+    if (bnc_state == BNC_REC)
+        bnc_take(n);                                    /* (bs16: the looper records the mix, before MASTER) */
     if (perf) {
         perf_master(out, n);
         return;

@@ -682,22 +682,21 @@ static void grid_edit(uint32_t slot, int32_t steps)
 #if FELUCCA_SLICE
 static void burger_slot_track(uint32_t s);
 /* bs17: on HOME with the SAMPLE row picked (five rows), the 16 white keys are the row's steps: a key sets its step (and
- * plays the slot once) or clears it; the keys do not play the track meanwhile (seq.c: song.grid 2) */
-static int lane_keys_on(void)
+ * plays the slot once) or clears it; the keys do not play a track meanwhile (seq.c: song.grid 2) */
+static int lane_keys_on(void) { return lane_home() && !name_on(); }
+static void lane_sync(void)                             /* every pass: the sequencer's and the voice's copies */
 {
-    return ui.home && burger_sample_row && home_tracks() && ux.burger && !(ui_prefs & PREF_LARGE) && !ui.menu &&
-           !ui.confirm && !ui.layer && !name_on();
-}
-static void lane_sync(void)                             /* every pass: the sequencer's copy, the track that plays it */
-{
-    uint32_t i, k = burger_slot_owner(burger_slot_last ? burger_slot_last : 1u);
+    uint32_t i;
     for (i = 0; i < 16u; i++)
         lane_note[i] = LANE_B[i];
-    lane_trk = (uint8_t)(k < NTRK ? k : 0xFFu);
+    lane_slot = (uint8_t)(LANE_SLOT >= 1u && LANE_SLOT <= 3u ? LANE_SLOT - 1u : 0u);
+    lane_bars = (uint8_t)(LANE_LBARS ? LANE_LBARS : 1u);
+    lane_lvl = (int16_t)(LANE_LVL ? LANE_LVL - 1 : 100);
+    lane_mute = (uint8_t)(LANE_FLAGS & 1u);
 }
 static void lane_keys(uint32_t pressed)
 {
-    uint32_t k, s = burger_slot_last ? burger_slot_last : 1u, own;
+    uint32_t k, s = (LANE_SLOT >= 1u && LANE_SLOT <= 3u ? LANE_SLOT : 1u);
     for (k = 0; k < 27u; k++) {
         uint32_t p = key_place(k);
         if (!((pressed >> k) & 1u) || key_black(k) || p >= 16u)
@@ -709,19 +708,155 @@ static void lane_keys(uint32_t pressed)
                 ui_message("SEND A SAMPLE FIRST");
                 continue;
             }
-            if ((own = burger_slot_owner(s)) >= NTRK) {   /* no track plays the slot: one is set up (as EDIT does) */
-                burger_slot_track(s);
-                burger_slot_edit = 0;
-                burger_sample_row = 1;
-                own = burger_slot_owner(s);
-            }
             LANE_B[p] = (uint8_t)LANE_NOTE;
-            if (own < NTRK && !song.playing) {          /* stopped: heard once */
-                trk_note_on(&trk[own], LANE_NOTE, 100u);
-                trk_note_off(&trk[own], LANE_NOTE);
-            }
+            if (!song.playing)                          /* stopped: heard once */
+                lane_aud = (uint8_t)s;
         }
         settings_later();
+        ui.force = 1;
+    }
+}
+/* HOME's knobs on the SAMPLE row: LEVEL, MUTE, BARS (a first take's), USR (the slot it plays) */
+static void lane_knob(uint32_t k, int32_t st)
+{
+    int16_t *vp;
+    const param_desc_t *d = home_param(k, &vp);
+    int32_t v = clamp(*vp + (st > 0 ? 1 : -1) * (k == 0u ? (st > 1 || st < -1 ? 4 : 1) : 1), d->min, d->max);
+    if (k == 0u) LANE_LVL = (uint8_t)(v + 1);
+    else if (k == 1u) LANE_FLAGS = (uint8_t)((LANE_FLAGS & ~1u) | (v & 1));
+    else if (k == 2u) LANE_MAXB = (uint8_t)v;
+    else {
+        LANE_SLOT = (uint8_t)v;
+        burger_slot_last = (uint8_t)v;
+    }
+    ui.hot_col = (uint8_t)k;
+    ui.hot_t = 40;
+    settings_later();
+    ui.force = 1;
+}
+
+/* bs16: SAVE on the SAMPLE row is a looper's footswitch: a tap records (the next bar on), a tap again stops (a first
+ * take at the bar's end; a layer runs to the loop's end); a tap and then held takes the newest layer off (the slot
+ * before it plays again); held alone clears the row. A take goes into the next slot round (USR1 2 3), never the one
+ * playing, so the two before it are its undo. It holds what is heard: the tracks and the row, before MASTER */
+static int burger_bounce_write(uint32_t k, uint32_t n, uint32_t div, uint32_t layer);   /* (editor.c) */
+static struct {
+    uint8_t tap;                                        /* a tap waiting: a hold may follow it (undo) */
+    uint8_t hist[2], nh;                                /* the slots played before (newest first): the undo */
+    uint8_t layer;                                      /* takes since the row was cleared (the names) */
+    uint8_t dub;                                        /* the take under way is a layer (the loop's length) */
+    uint32_t t;
+} lp;
+static void looper_tap(void)
+{
+    uint32_t bpm = (uint32_t)clamp(song.g[G_BPM], 20, 300), bar, need, d, mb;
+    if (bnc_state == BNC_ARM) {
+        bnc_state = BNC_IDLE;
+        ui_message("REC OFF");
+        return;
+    }
+    if (bnc_state == BNC_REC) {
+        if (lp.dub) {
+            ui_message("LAYER RUNS TO LOOP END");
+        } else {
+            bnc_stop = 1;
+            ui_message("STOPS AT BAR END");
+        }
+        return;
+    }
+    if (bnc_state != BNC_IDLE)
+        return;
+    lp.dub = LANE_LBARS != 0u;                          /* a loop is there: a layer as long as it */
+    mb = lp.dub ? LANE_LBARS : (LANE_MAXB == 1u ? 1u : 2u);
+    bar = (uint32_t)FS * 240u / bpm;                    /* (samples in a 4/4 bar) */
+    need = bar * mb;
+    for (d = 2u; d < 6u && need / d > 2u * BNC_BYTES; d++)
+        ;
+    while (mb > 1u && need / d > 2u * BNC_BYTES) {      /* too slow for two bars even at the lowest rate */
+        mb--;
+        need = bar * mb;
+    }
+    bnc_div = (uint8_t)d;
+    bnc_bars_max = (uint8_t)mb;
+    bnc_stop = 0;
+    bnc_state = BNC_ARM;
+    if (!song.playing && !seq_counting())
+        transport_req = 1;
+    ui_message(lp.dub ? "LAYER FROM NEXT BAR" : mb == 1u ? "REC 1 BAR, NEXT BAR" : "REC NEXT BAR, TAP=STOP");
+}
+static void looper_undo(void)
+{
+    if (bnc_state == BNC_ARM || bnc_state == BNC_REC) {
+        bnc_state = BNC_IDLE;                           /* the take under way goes */
+        ui_message("TAKE DROPPED");
+        return;
+    }
+    if (!lp.nh) {
+        ui_message("NOTHING TO UNDO");
+        return;
+    }
+    LANE_SLOT = (uint8_t)(lp.hist[0] + 1u);
+    burger_slot_last = LANE_SLOT;
+    lp.hist[0] = lp.hist[1];
+    lp.nh--;
+    if (lp.layer)
+        lp.layer--;
+    settings_later();
+    ui_message("UNDO LAYER");
+    ui.force = 1;
+}
+static void looper_clear(void)
+{
+    uint32_t i;
+    bnc_state = BNC_IDLE;
+    for (i = 0; i < 16u; i++)
+        LANE_B[i] = 0;
+    LANE_LBARS = 0;
+    lp.nh = 0;
+    lp.layer = 0;
+    lane_release();
+    settings_later();
+    ui_message("SAMPLE ROW CLEARED");
+    ui.force = 1;
+}
+static void looper_poll(void)                           /* every pass */
+{
+    if (lp.tap && fm1_ms - lp.t > 350u && !ui.save_t0) {   /* no hold after the tap: the tap */
+        lp.tap = 0;
+        looper_tap();
+    }
+    if (bnc_state == BNC_DONE) {                        /* a take: into the next slot round, then the row plays it */
+        uint32_t cur = LANE_SLOT >= 1u && LANE_SLOT <= 3u ? LANE_SLOT - 1u : 0u, k = (cur + 1u) % 3u, n = bnc_n;
+        uint32_t bars = bnc_bars ? bnc_bars : 1u, i, any = 0;
+        if (n < 64u) {
+            bnc_state = BNC_IDLE;
+            return;
+        }
+        ui_message("WRITING THE TAKE");
+        if (burger_bounce_write(k, n, bnc_div, lp.layer + 1u)) {
+            bnc_state = BNC_IDLE;
+            ui_message("TAKE NOT WRITTEN");
+            return;
+        }
+        bnc_state = BNC_IDLE;
+        if (usr_nz[cur] && LANE_LBARS) {                /* the slot it played: the undo */
+            lp.hist[1] = lp.hist[0];
+            lp.hist[0] = (uint8_t)cur;
+            if (lp.nh < 2u)
+                lp.nh++;
+        }
+        if (!lp.dub)
+            LANE_LBARS = (uint8_t)bars;
+        LANE_SLOT = (uint8_t)(k + 1u);
+        burger_slot_last = LANE_SLOT;
+        for (i = 0; i < 16u; i++)
+            any |= LANE_B[i];
+        if (!any)
+            LANE_B[0] = (uint8_t)LANE_NOTE;             /* (an empty row: the loop on step 1) */
+        lp.layer++;
+        settings_later();
+        ui_message(lp.dub ? "LAYER IN: USR" : "LOOP IN: USR");
+        str_cpy(ui.msg + str_len(ui.msg), k == 0u ? "1" : k == 1u ? "2" : "3", sizeof ui.msg - str_len(ui.msg));
         ui.force = 1;
     }
 }
@@ -1700,6 +1835,7 @@ static void ui_input(void)
     clk_usb_follow();                                   /* (bs15: CLK USB -> INT with the cable out, and back) */
 #if FELUCCA_SLICE
     lane_sync();                                        /* (bs17: the SAMPLE row's steps to the sequencer) */
+    looper_poll();                                      /* (bs16: SAVE's looper, a take written) */
 #endif
     if (scr_input(pressed, notes))                      /* MENU > SCREEN OFF: dark, or the wake gesture: swallowed */
         return;                                         /* (before the buttons' timers: no tap or hold after it) */
@@ -1820,6 +1956,18 @@ static void ui_input(void)
     }
     if (save == BT_HOLD && chain_busy())
         ui_message("STOP TO UNDO");
+#if FELUCCA_SLICE
+    else if (save == BT_HOLD && lane_keys_on()) {            /* bs16, the SAMPLE row: a tap then held: undo the layer; */
+        if (lp.tap && fm1_ms - lp.t < 1200u)                 /* held alone: clear the row */
+            looper_undo();
+        else
+            looper_clear();
+        lp.tap = 0;
+    } else if (save == BT_TAP && lane_keys_on()) {           /* .. a tap: the looper (once no hold follows) */
+        lp.tap = 1;
+        lp.t = fm1_ms;
+    }
+#endif
     else if (save == BT_HOLD && !take_undo())                /* SAVE held: the last take (bs12), else */
         undo_swap();                                         /* the last sound load */
     else if (save == BT_TAP && !ui.confirm)             /* SAVE acts on release (a hold is the undo) */
@@ -2066,6 +2214,12 @@ static void ui_input(void)
             ui.hot_col = (uint8_t)k;
             ui.hot_t = 40;
         }
+#if FELUCCA_SLICE
+        if (lane_home()) {                              /* (bs16: the SAMPLE row's LEVEL MUTE BARS USR) */
+            lane_knob(k, s);
+            continue;
+        }
+#endif
         if (ui.home) {
             int16_t *vp;
             const param_desc_t *d = home_param(k, &vp);

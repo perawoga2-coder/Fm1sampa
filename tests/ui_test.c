@@ -153,6 +153,17 @@ static struct { uint32_t stage; } felucca_dbg;
 #include "../firmware/src/ui_graph.c"
 #include "../firmware/src/ui_draw.c"
 static void burger_app_rec(void) {}              /* (editor.c on the device: not in this build) */
+static uint32_t host_bounce_k = 9, host_bounce_n;  /* (editor.c's burger_bounce_write: the take noted, slot k made) */
+static void host_slot_make(uint32_t k);
+static int burger_bounce_write(uint32_t k, uint32_t n, uint32_t div, uint32_t layer)
+{
+    (void)div; (void)layer;
+    host_bounce_k = k;
+    host_bounce_n = n;
+    host_slot_make(k);
+    smp_user_scan(k);
+    return 0;
+}
 #include "../firmware/src/ui_menu.c"
 #include "../firmware/src/ui_input.c"
 #include "../firmware/src/ui_layer.c"
@@ -719,7 +730,6 @@ static int test_takes(void)
     return bad;
 }
 
-static void host_slot_make(uint32_t k);
 /* bs14: EDIT on HOME's SAMPLE row: SAMPLING, then SAMPLE FX, then EDIT SAMPLE; HOME leaves them */
 static int test_sampling_pages(void)
 {
@@ -805,11 +815,11 @@ static int test_sample_lane(void)
     fm1_in.notes = 0; frame();
     host_notes |= 1u << 7; fm1_in.notes |= 1u << 7; frame();    /* C4, white key 5: step 5 */
     fm1_in.notes = 0; frame();
-    own = burger_slot_owner(1u);
-    ok &= LANE_B[0] == LANE_NOTE && LANE_B[4] == LANE_NOTE && LANE_B[1] == 0 && song.grid == 2u && own < NTRK;
-    bad += check("bs17 SAMPLE row: white keys 1 and 5 set steps 1 and 5, the keys silent, a track plays USR1", ok);
-    ok = lane_note[0] == LANE_NOTE && lane_note[4] == LANE_NOTE && lane_trk == own;
-    bad += check("bs17 the sequencer has the row's steps and its track", ok);
+    (void)own;
+    ok &= LANE_B[0] == LANE_NOTE && LANE_B[4] == LANE_NOTE && LANE_B[1] == 0 && song.grid == 2u;
+    bad += check("bs17 SAMPLE row: white keys 1 and 5 set steps 1 and 5, the keys silent", ok);
+    ok = lane_note[0] == LANE_NOTE && lane_note[4] == LANE_NOTE && lane_slot == 0u;
+    bad += check("bs17 the sequencer has the row's steps and its slot (USR1, its own voice)", ok);
     host_notes |= 1u << 0; fm1_in.notes |= 1u << 0; frame();
     fm1_in.notes = 0; frame();
     bad += check("bs17 white key 1 again: step 1 cleared", LANE_B[0] == 0 && LANE_B[4] == LANE_NOTE);
@@ -818,6 +828,61 @@ static int test_sample_lane(void)
     memset(LANE_B, 0, 16);
     memset(host_slots, 0, sizeof host_slots);
     smp_user_scan(0);
+    burger_sample_row = 0;
+    palette_set(UI_GREY_INDEX);
+    return bad;
+}
+
+/* bs16: SAVE on the SAMPLE row, a looper: tap records from the next bar, tap stops at the bar's end, the take goes into
+ * the next slot and the row plays it; a tap then held undoes the layer, held alone clears the row */
+static void lane_bar_now(void) { bnc_bar(); }      /* (seq.c's click at a bar's start) */
+static int test_looper(void)
+{
+    int bad = 0, ok;
+    ui_power_on();
+    palette_set(UI_BURGER_INDEX);
+    memset(LANE_B, 0, 21);                            /* steps, LBARS 0 */
+    LANE_SLOT = 1; LANE_MAXB = 0;
+    host_slot_make(0); smp_user_scan(0);
+    ui_home_view = HV_TRACKS;
+    go_home(); frame();
+    song.sel = NTRK - 1u; frame();
+    turn(EN_ALGO, 1); frame();
+    song.playing = 1;
+    press(B_SAVE); frames(480);                       /* a tap (no hold after it) */
+    ok = bnc_state == BNC_ARM && bnc_bars_max == 2u && bnc_div >= 2u && msg_is("REC NEXT BAR, TAP=STOP");
+    bad += check("bs16 SAVE tapped on the SAMPLE row: armed for the next bar, two bars at most", ok);
+    lane_bar_now();
+    ok = bnc_state == BNC_REC;
+    bnc_n = 30000u;                                   /* (as the mix recorded through the bar) */
+    press(B_SAVE); frames(480);
+    ok &= bnc_stop == 1u && bnc_state == BNC_REC;
+    lane_bar_now();                                   /* the bar ends: the take is done */
+    ok &= bnc_state == BNC_DONE;
+    frame();
+    ok &= bnc_state == BNC_IDLE && host_bounce_k == 1u && LANE_SLOT == 2u && LANE_LBARS == 1u && LANE_B[0] == LANE_NOTE;
+    bad += check("bs16 tap again: stops at the bar's end; the 1-bar loop into USR2, the row plays it on step 1", ok);
+    press(B_SAVE); frames(480);
+    lane_bar_now();
+    bnc_n = 30000u;
+    lane_bar_now();                                   /* a layer: as long as the loop (1 bar), ends by itself */
+    frame();
+    ok = host_bounce_k == 2u && LANE_SLOT == 3u && LANE_LBARS == 1u && lp.nh == 1u;
+    bad += check("bs16 a layer: the loop's length, into USR3 (the next round), USR2 kept as its undo", ok);
+    press(B_SAVE); hold(B_SAVE);                      /* a tap, then held */
+    bad += check("bs16 a tap then held: the layer off, USR2 plays again", LANE_SLOT == 2u && msg_is("UNDO LAYER"));
+    frames(1500);
+    hold(B_SAVE);                                     /* held alone */
+    ok = LANE_LBARS == 0u && LANE_B[0] == 0u && msg_is("SAMPLE ROW CLEARED");
+    bad += check("bs16 held alone: the row cleared (no loop, no steps)", ok);
+    lane_knob(0, -1); lane_knob(1, 1); frame();
+    bad += check("bs16 HOME's knobs on the row: LEVEL and MUTE, its own (the voice follows)", lane_lvl == 99 && lane_mute == 1u);
+    lane_knob(1, -1);
+    song.playing = 0;
+    memset(LANE_B, 0, 21);
+    LANE_SLOT = 0; LANE_LVL = 0; LANE_FLAGS = 0;
+    memset(host_slots, 0, sizeof host_slots);
+    smp_user_scan(0); smp_user_scan(1); smp_user_scan(2);
     burger_sample_row = 0;
     palette_set(UI_GREY_INDEX);
     return bad;
@@ -6897,8 +6962,9 @@ static int test_layer_knob_race(void)
                         ok &= a1.p[k][P_LEVEL] == lk_p[k][P_LEVEL] - 3;
                     else if (LL[l] == LAYER_SCL)
                         ok &= a1.p[0][LY_SCL.id[k]] != lk_p[0][LY_SCL.id[k]];
-                    else if (k < 2u)                        /* (EDIT KNOB 3 FAV: a mark, KNOB 4 nothing) */
-                        ok &= a1.snd[0] != rc_snd0;
+                    else if (k < 2u && !(k == 1u && ENGINES[trk[0].eng_req % NENGINES]->npresets == 3u))
+                        ok &= a1.snd[0] != rc_snd0;         /* (EDIT KNOB 3 FAV: a mark, KNOB 4 nothing; KNOB 2's 3
+                                                             * detents round 3 sounds (SLICE, bs16): the same one) */
                     runs++;
                     if (!ok) {
                         fails++;
@@ -10206,6 +10272,7 @@ int main(void)
     bad += test_sampling_pages();
     bad += test_clk_usb_follow();
     bad += test_sample_lane();
+    bad += test_looper();
     bad += test_step_rec();
     bad += test_step_rec();
     bad += test_step_preview_chord_entry();

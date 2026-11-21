@@ -1338,27 +1338,30 @@ static __attribute__((noinline)) void cin_record(void)
         cin_n[i] = 0;
     }
 }
-/* bs17, Burger Studio: the SAMPLE row's own 16 steps (ui.c keeps them in the settings and sets these). Each 1/16 of the
- * bar (the click's clk_step, so they never drift from the tracks) a step with a note plays it on lane_trk, the track that
- * plays the row's slot; the note before is let go then (a slice in ONE mode plays on, GATE a sixteenth) */
+/* bs17 / bs16, Burger Studio: the SAMPLE row's own 16 steps (ui keeps them in the settings and sets these). Each 1/16
+ * of the bar (the click's clk_step, so they never drift from the tracks) a step with a note starts the row's own voice
+ * on its slot (fx.c lane_voice_start: not a track's); a loop of lane_bars bars plays its steps on the first of them
+ * only, counted from the bar its recording began in (lane_bar0), so it stays where it was recorded */
 static volatile uint8_t lane_note[16];
-static volatile uint8_t lane_trk = 0xFFu;       /* the track, 0xFF none */
-static uint8_t lane_on_note, lane_on_trk = 0xFFu;
+static volatile uint8_t lane_slot;              /* the slot it plays, 0..2 */
+static volatile uint8_t lane_bars = 1;          /* its loop's bars (1, 2) */
+static volatile uint8_t lane_aud;               /* the UI: hear slot lane_aud - 1 once now */
+static uint32_t lane_barn, lane_bar0;           /* bars since PLAY; the bar a recording began in */
 static void lane_release(void)
 {
-    if (lane_on_trk < NTRK && lane_on_note)
-        trk_note_off(&trk[lane_on_trk], lane_on_note);
-    lane_on_note = 0;
+    lane_v.active = 0;
 }
 static void lane_tick(uint32_t s)
 {
-    uint32_t k = lane_trk, n = lane_note[s & 15u];
-    lane_release();
-    if (k < NTRK && n) {
-        trk_note_on(&trk[k], n, 100u);
-        lane_on_note = (uint8_t)n;
-        lane_on_trk = (uint8_t)k;
+    uint32_t b = lane_bars ? lane_bars : 1u;
+    if (!(s & 15u)) {
+        lane_barn++;
+        bnc_bar();                                  /* (bs16: the looper's recorder, from bar to bar) */
+        if (bnc_state == BNC_REC && bnc_bars == 0u)
+            lane_bar0 = lane_barn;
     }
+    if (lane_note[s & 15u] && (b == 1u || (lane_barn - lane_bar0) % b == 0u))
+        lane_voice_start(lane_slot);
 }
 /* the metronome's beat: adv samples on while the transport runs (click.c sounds it in this block) */
 static void click_tick(uint32_t adv)
@@ -1369,6 +1372,7 @@ static void click_tick(uint32_t adv)
         clk_pos = 0;
         clk_step = 0;
         beat = 2;
+        lane_barn = 0xFFFFFFFFu;                    /* (PLAY: the bar lane_tick starts counts as 0) */
         lane_tick(0);                               /* (bs17: the SAMPLE row's step 1) */
     } else {
         clk_pos += adv;
@@ -1504,6 +1508,10 @@ static void events_block(uint32_t n)
     }
     if (aud_req)
         seq_audition();                               /* (STEP PREVIEW: a step sounds, stopped) */
+    if (lane_aud) {                                   /* (bs17: a SAMPLE row step set: heard once) */
+        lane_voice_start(lane_aud - 1u);
+        lane_aud = 0;
+    }
     chain_tick(clock_mode && chain.running ? midi_seq_preview(&trk[chain.clk], seq_n) : seq_n);
     for (i = 0; i < NTRK; i++)
         seq_tick(&trk[i], seq_n);
