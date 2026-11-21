@@ -927,10 +927,12 @@ static void seq_release(track_t *t)
     t->slide_glide = 0;                             /* live MONO / LEG keys must not glide after it */
 }
 
+static void lane_release(void);
 static void seq_stop(void)
 {
     uint32_t i;
     song.playing = 0;
+    lane_release();                                /* (bs17: the SAMPLE row's note) */
     cin_left = 0;                                  /* (a count-in: cancelled, nothing recorded) */
     cin_flush = 0;
     memset(cin_n, 0, sizeof cin_n);
@@ -1336,6 +1338,28 @@ static __attribute__((noinline)) void cin_record(void)
         cin_n[i] = 0;
     }
 }
+/* bs17, Burger Studio: the SAMPLE row's own 16 steps (ui.c keeps them in the settings and sets these). Each 1/16 of the
+ * bar (the click's clk_step, so they never drift from the tracks) a step with a note plays it on lane_trk, the track that
+ * plays the row's slot; the note before is let go then (a slice in ONE mode plays on, GATE a sixteenth) */
+static volatile uint8_t lane_note[16];
+static volatile uint8_t lane_trk = 0xFFu;       /* the track, 0xFF none */
+static uint8_t lane_on_note, lane_on_trk = 0xFFu;
+static void lane_release(void)
+{
+    if (lane_on_trk < NTRK && lane_on_note)
+        trk_note_off(&trk[lane_on_trk], lane_on_note);
+    lane_on_note = 0;
+}
+static void lane_tick(uint32_t s)
+{
+    uint32_t k = lane_trk, n = lane_note[s & 15u];
+    lane_release();
+    if (k < NTRK && n) {
+        trk_note_on(&trk[k], n, 100u);
+        lane_on_note = (uint8_t)n;
+        lane_on_trk = (uint8_t)k;
+    }
+}
 /* the metronome's beat: adv samples on while the transport runs (click.c sounds it in this block) */
 static void click_tick(uint32_t adv)
 {
@@ -1345,11 +1369,13 @@ static void click_tick(uint32_t adv)
         clk_pos = 0;
         clk_step = 0;
         beat = 2;
+        lane_tick(0);                               /* (bs17: the SAMPLE row's step 1) */
     } else {
         clk_pos += adv;
         while (clk_pos >= p) {                      /* (as seq_tick: the remainder kept) */
             clk_pos -= p;
             clk_step = (clk_step + 1u) & 15u;
+            lane_tick(clk_step);
             if (!(clk_step & 3u))
                 beat = clk_step ? 1u : 2u;
         }

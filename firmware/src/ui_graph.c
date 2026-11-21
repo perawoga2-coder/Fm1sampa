@@ -1929,6 +1929,12 @@ static void home_sample_row(uint32_t pos)
                 nb[j] = ((const smp_user_hdr_t *)smp_user_xip(sl))->name[j];
         sig = str_hash(sig, nb);
     }
+    if (tr5) {                                       /* (bs17: the row's steps, the one playing) */
+        uint32_t i;
+        for (i = 0; i < 16u; i++)
+            sig = sig * 31u + LANE_B[i];
+        sig += song.playing ? (clk_step + 1u) * 0x01000193u : 0u;
+    }
     if (!ui.force && sig == ts_sample_sig)
         return;
     ts_sample_sig = sig;
@@ -1960,18 +1966,34 @@ static void home_sample_row(uint32_t pos)
         tl[n] = 0;
         cv_free_text(24, 16 - AF_S_CAP_Y, &AF_S, tl, sel ? T_INK : T_MID, bg, 110);
     }
-    cv_text_on(148, (TR_H - AF_S_CAP_H) / 2 - AF_S_CAP_Y, &AF_S, "USR", sel ? T_INK : T_MID, bg);
-    for (k = 0; k < 3u; k++) {                       /* the three slots: a pill each, lit when it holds a sample */
-        static const char *const N[3] = {"1", "2", "3"};
-        uint32_t lit = usr_nz[k] || usr_cov[k];      /* (bs10: a slot inside a joined sample: lit, joined to the one before) */
-        uint16_t on = lit ? (sel ? T_INK : tc) : (sel ? ux_mix(tc, T_INK, 35) : T_RAISE);
-        x = 176 + (int32_t)k * 18;
-        cv_rrect(x, (TR_H - 15) / 2, 16, 15, 4, on, bg);
-        if (usr_cov[k])
-            cv_rect(x - 4, (TR_H - 15) / 2 + 5, 6, 5, on);
-        else
-            cv_text_on(x + 4, (TR_H - AF_S_CAP_H) / 2 - AF_S_CAP_Y, &AF_S, N[k], usr_nz[k] ? (sel ? tc : T_INK) : T_DIM, on);
-        (void)ch;
+    {
+        int32_t py = tr5 ? 1 : (TR_H - 15) / 2, phh = tr5 ? 12 : 15;   /* (five rows: the pills on the name's line) */
+        cv_text_on(148, py + (phh - AF_S_CAP_H) / 2 - AF_S_CAP_Y, &AF_S, "USR", sel ? T_INK : T_MID, bg);
+        for (k = 0; k < 3u; k++) {                   /* the three slots: a pill each, lit when it holds a sample */
+            static const char *const N[3] = {"1", "2", "3"};
+            uint32_t lit = usr_nz[k] || usr_cov[k];  /* (bs10: a slot inside a joined sample: lit, joined to the one before) */
+            uint16_t on = lit ? (sel ? T_INK : tc) : (sel ? ux_mix(tc, T_INK, 35) : T_RAISE);
+            x = 176 + (int32_t)k * 18;
+            cv_rrect(x, py, 16, phh, 4, on, bg);
+            if (usr_cov[k])
+                cv_rect(x - 4, py + phh / 2 - 2, 6, 5, on);
+            else
+                cv_text_on(x + 4, py + (phh - AF_S_CAP_H) / 2 - AF_S_CAP_Y, &AF_S, N[k], usr_nz[k] ? (sel ? tc : T_INK) : T_DIM, on);
+            (void)ch;
+        }
+    }
+    if (tr5) {                                       /* bs17: the row's 16 steps, as a track's (a pad a step set) */
+        uint32_t i, ph = song.playing ? clk_step & 15u : 0xFFu;
+        uint16_t cn = sel ? T_INK : tc, cs = sel ? ux_mix(tc, T_INK, 35) : T_RAISE;
+        for (i = 0; i < 16u; i++) {
+            int32_t bx = tr_bx(i);
+            if (i == ph)
+                cv_rrect(bx - 1, TR_CELL_Y, TR_BW + 2, TR_H - TR_CELL_Y - 1, 2, sel ? ux_mix(tc, T_INK, 20) : T_RAISE, bg);
+            if (LANE_B[i])
+                cv_rrect(bx, TR_SB - 4, TR_BW, 4, 1, i == ph ? (sel ? tc : T_TEXT) : cn, i == ph ? (sel ? ux_mix(tc, T_INK, 20) : T_RAISE) : bg);
+            else
+                cv_rect(bx, TR_SB - 2, TR_BW, 2, i == ph ? (sel ? T_INK : T_MID) : cs);
+        }
     }
     cv_blit(3, (uint32_t)y);
 }

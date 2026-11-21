@@ -1661,6 +1661,10 @@ static void setup(int s)
     case S_HOME_SAMPLE:                                /* Burger Studio: HOME's rows scrolled to SAMPLE */
         host_slot_make(0); smp_user_scan(0);
         tracks_scene(1); song.sel = NTRK - 1u; burger_sample_row = 1; ui.force = 1;
+        {   /* bs17: the row's own steps */
+            static const uint8_t L[16] = {60, 0, 0, 60, 0, 0, 60, 0, 60, 0, 60, 0, 0, 60, 0, 0};
+            memcpy(LANE_B, L, 16);
+        }
         break;
     case S_BURGER_EDIT_SAMPLE:                         /* Burger Studio: EDIT SAMPLE on USR1, a non-SLICE track selected */
         eng(4u); host_slot_make(0); smp_user_scan(0);

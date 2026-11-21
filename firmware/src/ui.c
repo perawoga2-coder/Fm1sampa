@@ -1108,6 +1108,12 @@ static void motion_undo_done(track_t *t)
 
 static int param_kept(uint32_t i);
 
+/* bs17, Burger Studio: the SAMPLE row's own 16 steps (seq.c lane_tick plays them on the track that plays the row's slot),
+ * kept in the settings: favorites.factory[ENGI_SAMPLE][8..23], a note a step (0: none). SAMPLE has 4 presets, its
+ * favourites take byte 0; bytes 8.. no firmware wrote before (all 0 in an older setting: no steps) */
+#define LANE_B (&favorites.factory[ENGI_SAMPLE][8])
+#define LANE_NOTE 60u                            /* a step's note: the slot's first slice / the sample at its pitch */
+
 /* bs12, Burger Studio: UNDO TAKE, for layering by ear. Each pass recorded live into the selected track (it armed,
  * the transport running, no song chain) that changed its steps is a take: the steps as that pass began are kept,
  * TK_N deep. SAVE held while a take is newer than the last load's undo copy puts the newest take back: that layer

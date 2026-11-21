@@ -787,6 +787,42 @@ static int test_clk_usb_follow(void)
     return bad;
 }
 
+/* bs17: HOME's SAMPLE row picked: the white keys are its 16 steps, played on the track that plays the slot */
+static int test_sample_lane(void)
+{
+    int bad = 0, ok;
+    uint32_t own;
+    ui_power_on();
+    palette_set(UI_BURGER_INDEX);
+    memset(LANE_B, 0, 16);
+    host_slot_make(0); smp_user_scan(0);
+    ui_home_view = HV_TRACKS;
+    go_home(); frame();
+    song.sel = NTRK - 1u; frame();
+    turn(EN_ALGO, 1); frame();
+    ok = burger_sample_row == 1u && lane_keys_on();
+    host_notes |= 1u << 0; fm1_in.notes |= 1u << 0; frame();    /* F3, white key 1: step 1 */
+    fm1_in.notes = 0; frame();
+    host_notes |= 1u << 7; fm1_in.notes |= 1u << 7; frame();    /* C4, white key 5: step 5 */
+    fm1_in.notes = 0; frame();
+    own = burger_slot_owner(1u);
+    ok &= LANE_B[0] == LANE_NOTE && LANE_B[4] == LANE_NOTE && LANE_B[1] == 0 && song.grid == 2u && own < NTRK;
+    bad += check("bs17 SAMPLE row: white keys 1 and 5 set steps 1 and 5, the keys silent, a track plays USR1", ok);
+    ok = lane_note[0] == LANE_NOTE && lane_note[4] == LANE_NOTE && lane_trk == own;
+    bad += check("bs17 the sequencer has the row's steps and its track", ok);
+    host_notes |= 1u << 0; fm1_in.notes |= 1u << 0; frame();
+    fm1_in.notes = 0; frame();
+    bad += check("bs17 white key 1 again: step 1 cleared", LANE_B[0] == 0 && LANE_B[4] == LANE_NOTE);
+    turn(EN_ALGO, -1); frame();
+    bad += check("bs17 back up to T4: the keys play again", !lane_keys_on() && song.grid != 2u);
+    memset(LANE_B, 0, 16);
+    memset(host_slots, 0, sizeof host_slots);
+    smp_user_scan(0);
+    burger_sample_row = 0;
+    palette_set(UI_GREY_INDEX);
+    return bad;
+}
+
 static int test_rec(void)
 {
     static const uint8_t FAMS[3] = {FAM_TRK, FAM_SEQ, FAM_ARP};
@@ -10169,6 +10205,7 @@ int main(void)
     bad += test_takes();
     bad += test_sampling_pages();
     bad += test_clk_usb_follow();
+    bad += test_sample_lane();
     bad += test_step_rec();
     bad += test_step_rec();
     bad += test_step_preview_chord_entry();

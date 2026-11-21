@@ -679,6 +679,53 @@ static void grid_edit(uint32_t slot, int32_t steps)
 
 /* the keys on the grid (presses): a white key toggles the selected lane at its step of the page (its accent
  * while ACC is held) and puts the cursor there; a lane key selects the lane (seq.c plays it); the page keys */
+#if FELUCCA_SLICE
+static void burger_slot_track(uint32_t s);
+/* bs17: on HOME with the SAMPLE row picked (five rows), the 16 white keys are the row's steps: a key sets its step (and
+ * plays the slot once) or clears it; the keys do not play the track meanwhile (seq.c: song.grid 2) */
+static int lane_keys_on(void)
+{
+    return ui.home && burger_sample_row && home_tracks() && ux.burger && !(ui_prefs & PREF_LARGE) && !ui.menu &&
+           !ui.confirm && !ui.layer && !name_on();
+}
+static void lane_sync(void)                             /* every pass: the sequencer's copy, the track that plays it */
+{
+    uint32_t i, k = burger_slot_owner(burger_slot_last ? burger_slot_last : 1u);
+    for (i = 0; i < 16u; i++)
+        lane_note[i] = LANE_B[i];
+    lane_trk = (uint8_t)(k < NTRK ? k : 0xFFu);
+}
+static void lane_keys(uint32_t pressed)
+{
+    uint32_t k, s = burger_slot_last ? burger_slot_last : 1u, own;
+    for (k = 0; k < 27u; k++) {
+        uint32_t p = key_place(k);
+        if (!((pressed >> k) & 1u) || key_black(k) || p >= 16u)
+            continue;
+        if (LANE_B[p]) {
+            LANE_B[p] = 0;
+        } else {
+            if (!usr_nz[s - 1u]) {
+                ui_message("SEND A SAMPLE FIRST");
+                continue;
+            }
+            if ((own = burger_slot_owner(s)) >= NTRK) {   /* no track plays the slot: one is set up (as EDIT does) */
+                burger_slot_track(s);
+                burger_slot_edit = 0;
+                burger_sample_row = 1;
+                own = burger_slot_owner(s);
+            }
+            LANE_B[p] = (uint8_t)LANE_NOTE;
+            if (own < NTRK && !song.playing) {          /* stopped: heard once */
+                trk_note_on(&trk[own], LANE_NOTE, 100u);
+                trk_note_off(&trk[own], LANE_NOTE);
+            }
+        }
+        settings_later();
+        ui.force = 1;
+    }
+}
+#endif
 static void grid_keys(uint32_t pressed)
 {
     uint32_t k, len = (uint32_t)TSEL->p[P_SLEN];
@@ -1651,6 +1698,9 @@ static void ui_input(void)
     follow_poll();                                      /* (1.6, #242: SEQ's roll follows the play position) */
     take_poll();                                        /* (bs12: UNDO TAKE, each pass recorded) */
     clk_usb_follow();                                   /* (bs15: CLK USB -> INT with the cable out, and back) */
+#if FELUCCA_SLICE
+    lane_sync();                                        /* (bs17: the SAMPLE row's steps to the sequencer) */
+#endif
     if (scr_input(pressed, notes))                      /* MENU > SCREEN OFF: dark, or the wake gesture: swallowed */
         return;                                         /* (before the buttons' timers: no tap or hold after it) */
     if (mom.n && !mom_down()) {                         /* MOMENTARY: LFO let go (or the menu, a layer ..): back */
@@ -1910,8 +1960,15 @@ static void ui_input(void)
 #if FELUCCA_SLICE
     if (notes && slice_page_on())                       /* SLICES: a key picks the slice it plays */
         slice_keys_pick(notes);
+    if (lane_keys_on())
+        song.grid = 2u;                                 /* (bs17: the SAMPLE row's steps: the keys are silent) */
 #endif
     lock_keys();                                        /* (a grid key on a hit let go: the hit goes) */
+#if FELUCCA_SLICE
+    if (lane_keys_on()) {
+        lane_keys(notes);
+    } else
+#endif
     if (song.grid == 3u) {
         song_keys(notes);
     } else if (song.grid) {
