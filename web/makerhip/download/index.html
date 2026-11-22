@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install · Maker Hip</title>
+<meta name="description" content="How to install Burger Studio, 16 Track and the Burger Studio FM-1 firmware.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Kanit:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #1b1238; --ink: #1a1020; --paper: #fff6e0; --orange: #ff7a2f; --orange2: #ffb070; --sun: #ffd86b; --pink: #ff5ca8; --teal: #2dd4bf; --dim: #6b5f50; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #1b1238; } }
+  :root[data-theme="light"] { --bg: #1b1238; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--paper); }
+  body { font-family: "Kanit", system-ui, sans-serif; line-height: 1.5; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
+  .bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .pix { font-family: "Press Start 2P", monospace; font-size: 11px; color: var(--ink); background: var(--sun); border: 0; padding: 10px 12px; text-decoration: none; cursor: pointer;
+         box-shadow: 0 4px 0 var(--ink), 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 -4px 0 var(--ink); }
+  #lang { font-family: "Kanit", sans-serif; font-size: 14px; font-weight: 600; padding: 4px 10px; background: var(--paper); }
+  h1 { font-family: "Press Start 2P", monospace; font-size: 18px; line-height: 1.5; color: var(--sun); text-shadow: 2px 2px 0 var(--ink); margin: 8px 0 6px; }
+  .lead { font-size: 16px; margin: 0 0 22px; }
+  .card { background: var(--paper); color: var(--ink); padding: 18px 18px 14px; margin: 26px 0;
+          box-shadow: 0 6px 0 var(--ink), 6px 0 0 var(--ink), -6px 0 0 var(--ink), 0 -6px 0 var(--ink), 6px 6px 0 6px rgba(0,0,0,.35); }
+  .card h2 { font-family: "Press Start 2P", monospace; font-size: 13px; line-height: 1.6; margin: 0 0 10px; }
+  .card p, .card li { font-size: 15px; }
+  .card ol, .card ul { padding-left: 22px; margin: 8px 0; }
+  .card li { margin: 6px 0; }
+  .btns { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 4px 6px; }
+  .btn { font-family: "Press Start 2P", monospace; font-size: 11px; color: var(--ink); background: var(--orange); padding: 12px 12px; text-decoration: none;
+         box-shadow: 0 4px 0 var(--ink), 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 -4px 0 var(--ink); }
+  .btn:hover { background: var(--orange2); }
+  .btn.alt { background: var(--teal); }
+  :lang(th) .btn { font-family: "Kanit", sans-serif; font-size: 16px; font-weight: 600; padding: 8px 12px; }
+  .note { font-size: 13px; color: var(--dim); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 8px 0; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 2px solid #e8dcc0; }
+  th { font-weight: 600; }
+  .flow { font-family: "Press Start 2P", monospace; font-size: 10px; line-height: 2; background: #1a1020; color: var(--sun); padding: 10px 12px; overflow-x: auto; white-space: nowrap; }
+  footer { text-align: center; font-size: 12px; padding: 10px 16px 30px; }
+  a.link { color: #c2410c; font-weight: 600; }
+  .btn:focus-visible, .pix:focus-visible, a.link:focus-visible { outline: 3px solid var(--pink); outline-offset: 5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <a class="pix" href="../">◀ MAKER HIP</a>
+    <button id="lang" class="pix" type="button">ไทย</button>
+  </div>
+
+  <h1>INSTALL</h1>
+  <p class="lead" data-th="Burger Studio เปลี่ยน M-VAVE FM-1 ให้เป็นเครื่องแซมเปิล พร้อมแอป Android ฟรีสำหรับทำเพลง ส่งเสียงเข้าเครื่อง และมิกซ์" data-en="Burger Studio turns your M-VAVE FM-1 into a sampler workstation, with free Android apps that make, send and mix your sounds."></p>
+
+  <section class="card">
+    <h2>1 · THE APPS (ANDROID)</h2>
+    <p data-th="ทั้งสองแอปฟรี ยังไม่อยู่ใน Play Store ดาวน์โหลดไฟล์ APK แล้วติดตั้งเองตามขั้นตอนด้านล่าง ใช้กับแท็บเล็ตหรือโทรศัพท์ Android 6.0 ขึ้นไป" data-en="Both apps are free and not on the Play Store yet: download the APK file and install it as below. Android 6.0 or newer, tablet or phone."></p>
+    <div class="btns">
+      <a class="btn" id="apk" href="https://github.com/perawoga2-coder/fm1burger/releases/download/v3.36-lab/burgerstudio-lab-v3.36-debug.apk">BURGER STUDIO APK</a>
+      <a class="btn" id="apk16" href="https://github.com/perawoga2-coder/fm1bridge/releases/download/v0.6/16track-v0.6-debug.apk">16 TRACK APK</a>
+    </div>
+    <p class="note"><span id="vers">Burger Studio Beta 3.36 · 16 Track Beta 0.6</span></p>
+    <ol>
+      <li data-th="แตะปุ่มดาวน์โหลดใน Chrome (ถ้าเปิดลิงก์จากแอปแชทแล้วโหลดไม่ได้ ให้เปิดหน้านี้ใน Chrome)" data-en="Tap a download button in Chrome (if a chat app's browser will not download it, open this page in Chrome)."></li>
+      <li data-th="เปิดไฟล์ที่โหลดเสร็จ จากแถบแจ้งเตือนหรือโฟลเดอร์ Downloads" data-en="Open the downloaded file, from the notification or the Downloads folder."></li>
+      <li data-th="ถ้า Android ถามเรื่อง &quot;ติดตั้งแอปที่ไม่รู้จัก&quot; ให้กด ตั้งค่า แล้วเปิด อนุญาตจากแหล่งนี้ ให้ Chrome (ทำครั้งเดียว)" data-en="If Android asks about installing unknown apps, tap Settings and turn on Allow from this source for Chrome (once)."></li>
+      <li data-th="กด ติดตั้ง ถ้า Play Protect เตือนว่าไม่รู้จักผู้พัฒนา ให้กด รายละเอียดเพิ่มเติม แล้ว ติดตั้งต่อไป (แอปเซ็นด้วยกุญแจของ Maker Hip)" data-en="Tap Install. If Play Protect warns about an unknown developer, tap More details, then Install anyway (the apps are signed with Maker Hip's key)."></li>
+      <li data-th="รุ่นใหม่ติดตั้งทับรุ่นเก่าได้ งานที่บันทึกไว้ไม่หาย" data-en="A new version installs over the old one: your work stays."></li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <h2 data-th="2 · แอปขอสิทธิ์อะไร และเพื่ออะไร" data-en="2 · WHAT THE APPS ASK FOR, AND WHY"></h2>
+    <table>
+      <tr><th data-th="สิทธิ์" data-en="Permission"></th><th data-th="ใช้ทำอะไร" data-en="What for"></th></tr>
+      <tr><td data-th="ไมโครโฟน" data-en="Microphone"></td><td data-th="อัดเสียงและแซมเปิล (เฉพาะตอนที่คุณกดอัด)" data-en="Recording and sampling (only while you record)."></td></tr>
+      <tr><td data-th="อุปกรณ์ใกล้เคียง (Bluetooth)" data-en="Nearby devices (Bluetooth)"></td><td data-th="เชื่อมคอนโทรลเลอร์ MIDI ไร้สาย เช่น M-VAVE SMC-Mixer (เฉพาะตอนกดค้นหา)" data-en="Wireless MIDI controllers such as the M-VAVE SMC-Mixer (only when you search for one)."></td></tr>
+      <tr><td>USB</td><td data-th="ส่งเสียงเข้า FM-1, MIDI และซาวด์การ์ด USB" data-en="Sending sounds to the FM-1, MIDI and USB audio interfaces."></td></tr>
+      <tr><td>INBOX</td><td data-th="Burger Studio กับ 16 Track ส่งงานให้กันในเครื่อง แอปอื่นอ่านไม่ได้ และไม่ขึ้นหน้าขอสิทธิ์" data-en="Burger Studio and 16 Track hand work to each other on the device; no other app can read it, and there is no prompt."></td></tr>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2 data-th="3 · เฟิร์มแวร์ FM-1" data-en="3 · THE FM-1 FIRMWARE"></h2>
+    <ol>
+      <li data-th="ต่อ FM-1 กับคอมพิวเตอร์หรือ Android ด้วยสาย USB-C แล้วเปิดหน้าติดตั้งใน Chrome หรือ Edge" data-en="Connect the FM-1 with a USB-C cable to a computer or Android device and open the installer in Chrome or Edge."></li>
+      <li data-th="สำรองข้อมูลเครื่องก่อนติดตั้ง (ในหน้าติดตั้งมีปุ่มให้)" data-en="Back up your FM-1 first (the installer has a button for it)."></li>
+      <li data-th="กดติดตั้งแล้วรอจนเสร็จ ห้ามถอดสายระหว่างติดตั้ง" data-en="Install and wait until it is done; do not unplug the cable meanwhile."></li>
+      <li data-th="อยากกลับไปเฟิร์มแวร์เดิม ใช้ตัวอัปเดตของ M-VAVE ได้ทุกเมื่อ" data-en="To go back to the stock firmware, use M-VAVE's own updater at any time."></li>
+    </ol>
+    <div class="btns">
+      <a class="btn" href="../../webapp/installer/" data-th="ติดตั้งเฟิร์มแวร์" data-en="INSTALL FIRMWARE"></a>
+      <a class="btn alt" href="../guide/" data-th="คู่มือ SAMPLING" data-en="SAMPLING GUIDE"></a>
+    </div>
+    <p class="note" data-th="ติดตั้งด้วยความเสี่ยงของคุณเอง เฟิร์มแวร์นี้ไม่ใช่ของ M-VAVE สร้างบน Felucca (GPL-3.0)" data-en="Install at your own risk: this is not M-VAVE's firmware. Built on Felucca (GPL-3.0)."></p>
+  </section>
+
+  <section class="card">
+    <h2 data-th="4 · ใช้ร่วมกัน" data-en="4 · HOW THEY WORK TOGETHER"></h2>
+    <div class="flow">BURGER STUDIO -- USB --> FM-1<br>BURGER STUDIO -- MIX --> 16 TRACK INBOX -- SPLIT --> 16 TRACKS</div>
+    <ul>
+      <li data-th="ทำบีตใน Burger Studio แล้วส่ง sample เข้า FM-1 ผ่านสาย USB เล่นบนเครื่องได้ทันที" data-en="Make beats in Burger Studio and send samples to the FM-1 over USB: play them on the hardware right away."></li>
+      <li data-th="TAKE ALL เก็บแต่ละท่อนเป็น Q แล้ว → MIX ส่งไป 16 Track โดยไม่ต้องเปิดแอป จากนั้น SPLIT ลงแทร็ก มิกซ์และอัดทับ" data-en="TAKE ALL keeps each part as a Q; → MIX sends it to 16 Track without opening it; then SPLIT it onto the tracks, mix and record over it."></li>
+    </ul>
+  </section>
+</div>
+<footer>© Maker Hip by Hippie Maker</footer>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+let lang = store.get("mh.lang") === "th" ? "th" : "en";
+function paint() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-th]").forEach(el => { el.textContent = el.dataset[lang] || el.dataset.th; });
+  $("lang").textContent = lang === "th" ? "EN" : "ไทย";
+}
+$("lang").onclick = () => { lang = lang === "th" ? "en" : "th"; store.set("mh.lang", lang); paint(); };
+paint();
+fetch("../apps.json", { cache: "no-cache" }).then(r => r.json()).then(j => {
+  if (j.burger && j.burger.url) $("apk").href = j.burger.url;
+  if (j.track16 && j.track16.url) $("apk16").href = j.track16.url;
+  $("vers").textContent = "Burger Studio Beta " + (j.burger ? j.burger.version : "?") + " · 16 Track Beta " + (j.track16 ? j.track16.version : "?");
+}).catch(() => {});
+</script>
+</body>
+</html>

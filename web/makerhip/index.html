@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Maker Hip</title>
-<meta name="description" content="Maker Hip by Hippie Maker: Burger Studio, the FM-1 firmware and sound banks.">
+<meta name="description" content="Burger Studio turns your M-VAVE FM-1 into a sampler workstation, with free Android apps that make, send and mix your sounds.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Kanit:wght@400;600&display=swap" rel="stylesheet">
@@ -42,7 +42,7 @@
   #logo { width: min(528px, 92vw); height: auto; }
   .by { font-family: "Press Start 2P", monospace; font-size: 12px; color: var(--paper); text-shadow: 2px 2px 0 var(--ink); margin-top: 6px; }
   .tag { margin: 12px auto 0; max-width: 560px; color: var(--paper); text-shadow: 1px 1px 0 var(--ink); font-size: 16px; }
-  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 52vh; }
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; margin-top: 52vh; }
   .down { text-align: center; font-family: "Press Start 2P", monospace; color: var(--sun); text-shadow: 2px 2px 0 var(--ink); margin-top: 40vh; animation: bob 1.2s steps(2) infinite; }
   @keyframes bob { 50% { transform: translateY(6px); } }
   .cards.after { margin-top: 10vh; }
@@ -101,16 +101,23 @@
     <header>
       <canvas id="logo" width="176" height="36" aria-label="MAKER HIP"></canvas>
       <div class="by">by Hippie Maker</div>
-      <div class="tag" data-th="เครื่องมือทำเพลงจากเกาะเล็ก ๆ: แซมเปิลอะไรก็ได้ แล้วเล่นมันให้โลกได้ยิน" data-en="Music tools from a tiny island: sample anything, then play it to the world."></div>
+      <div class="tag" data-th="Burger Studio เปลี่ยน M-VAVE FM-1 ให้เป็นเครื่องแซมเปิล พร้อมแอป Android ฟรีสำหรับทำเพลง ส่งเสียงเข้าเครื่อง และมิกซ์" data-en="Burger Studio turns your M-VAVE FM-1 into a sampler workstation, with free Android apps that make, send and mix your sounds."></div>
     </header>
     <div class="down" aria-hidden="true">▼</div>
     <section class="cards after">
       <article class="card">
         <canvas id="i0" width="24" height="24" aria-hidden="true"></canvas>
         <h2>BURGER STUDIO <span class="beta">BETA</span></h2>
-        <p data-th="แอปทำเพลงบนแท็บเล็ต Android: แซมเปิล 4 แทร็ก, แพดกลอง 32 ช่อง, เบส, ซินธ์, กีตาร์ และส่งเสียงเข้า FM-1" data-en="A music app for Android tablets: 4 sampler tracks, 32 drum pads, bass, synth, guitars, and samples into the FM-1."></p>
-        <a id="apk" href="https://github.com/perawoga2-coder/fm1burger/releases/download/v3.7-lab/burgerstudio-lab-v3.7-debug.apk" data-th="ดาวน์โหลดตัว BETA" data-en="DOWNLOAD BETA"></a>
-        <div class="note" id="apkv" data-th="เวอร์ชัน 3.7 · Beta ตัวทดลอง" data-en="Version 3.7 · Beta"></div>
+        <p data-th="ทำบีตและเพลงบน Android: แซมเปิล, ชุดกลองที่แต่งเองได้, ซินธ์, Maker Bank ที่มีทุกเสียงของ FM-1 แล้วส่งเสียงเข้าเครื่อง หรือส่งไปมิกซ์ใน 16 Track" data-en="Make beats and songs on Android: sampler, drum kits you build and edit, synths, a Maker Bank with every FM-1 sound. Send samples to the FM-1, or parts to 16 Track to mix."></p>
+        <a id="apk" href="https://github.com/perawoga2-coder/fm1burger/releases/download/v3.36-lab/burgerstudio-lab-v3.36-debug.apk" data-th="ดาวน์โหลด APK" data-en="DOWNLOAD APK"></a>
+        <div class="note"><span id="apkv">Beta 3.36</span> · <a class="guide" href="download/" data-th="วิธีติดตั้ง" data-en="HOW TO INSTALL"></a></div>
+      </article>
+      <article class="card">
+        <canvas id="i3" width="24" height="24" aria-hidden="true"></canvas>
+        <h2>16 TRACK <span class="beta">BETA</span></h2>
+        <p data-th="มิกเซอร์และเครื่องอัด 16 แทร็ก: อัดร้องหรือเครื่องดนตรีทับ, EQ ทุกแทร็ก, LOOP, MIDI และรับงานจาก Burger Studio แยกลงแทร็กให้เอง" data-en="A 16-track mixer and recorder: record vocals or instruments over your song, EQ on every track, LOOP, MIDI, and parts from Burger Studio split onto its tracks for you."></p>
+        <a id="apk16" href="https://github.com/perawoga2-coder/fm1bridge/releases/download/v0.6/16track-v0.6-debug.apk" data-th="ดาวน์โหลด APK" data-en="DOWNLOAD APK"></a>
+        <div class="note"><span id="apk16v">Beta 0.6</span> · <a class="guide" href="download/" data-th="วิธีติดตั้ง" data-en="HOW TO INSTALL"></a></div>
       </article>
       <article class="card">
         <canvas id="i1" width="24" height="24" aria-hidden="true"></canvas>
@@ -246,9 +253,9 @@ function logo() {
   text("MAKER HIP", Math.floor((176 - w - s) / 2), 4, s, P.orange, P.ink);
 }
 
-/* the three pixel icons, bobbing: a burger, the FM-1, a sound bank (a record) */
+/* the pixel icons, bobbing: a burger, the FM-1, a sound bank (a record), 16 Track (a mixer) */
 function icons(t) {
-  for (let k = 0; k < 3; k++) {
+  for (let k = 0; k < 4; k++) {
     const c = $("i" + k).getContext("2d");
     setCtx(c);
     c.clearRect(0, 0, 24, 24);
@@ -262,6 +269,13 @@ function icons(t) {
       R(5, 8 + b, 6, 1, "#3ad86a"); R(5, 10 + b, on ? 5 : 3, 1, "#3ad86a"); R(5, 12 + b, 4, 1, "#3ad86a");
       for (let j = 0; j < 4; j++) R(13 + (j % 2) * 4, 8 + Math.floor(j / 2) * 4 + b, 3, 3, j === Math.floor(t * 2) % 4 ? "#ff7a2f" : "#c0c7d6");
       for (let j = 0; j < 8; j++) R(4 + j * 2, 16 + b, 1, 2, j % 2 ? "#fff6e0" : "#1a1020");
+    } else if (k === 3) {
+      R(3, 4 + b, 18, 17, "#2c2c37");
+      for (let j = 0; j < 4; j++) {
+        const x = 5 + j * 4, y = 7 + Math.round((Math.sin(t * 2.4 + j * 1.3) + 1) * 3.5);
+        R(x + 1, 6 + b, 1, 13, "#5c5c69");
+        R(x, y + b, 3, 2, ["#ff7a2f", "#4da3ff", "#34d399", "#ff5ca8"][j]);
+      }
     } else {
       const a = t * 2;
       for (let y = -8; y <= 8; y++) for (let x = -8; x <= 8; x++) {
@@ -284,6 +298,11 @@ $("lang").onclick = () => { lang = lang === "th" ? "en" : "th"; store.set("mh.la
 
 paintLang();
 paintSoundBtns();
+/* the app versions offered (apps.json: the ones checked on a device) */
+fetch("apps.json", { cache: "no-cache" }).then(r => r.json()).then(j => {
+  if (j.burger && j.burger.url) { $("apk").href = j.burger.url; $("apkv").textContent = "Beta " + j.burger.version; }
+  if (j.track16 && j.track16.url) { $("apk16").href = j.track16.url; $("apk16v").textContent = "Beta " + j.track16.version; }
+}).catch(() => {});
 if (window.__videoMode) {
   /* (tools/render_intro: draws frames on demand) */
 } else if (store.get("mh.seen") === "1" || reduce) {
