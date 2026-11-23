@@ -42,6 +42,43 @@
   footer { text-align: center; font-size: 12px; padding: 10px 16px 30px; }
   a.link { color: #c2410c; font-weight: 600; }
   .btn:focus-visible, .pix:focus-visible, a.link:focus-visible { outline: 3px solid var(--pink); outline-offset: 5px; }
+
+  /* install guide in pictures */
+  .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 22px 18px; margin: 14px 0 6px; }
+  .step { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .num { font-family: "Press Start 2P", monospace; font-size: 12px; background: var(--orange); color: var(--ink); padding: 6px 9px; margin-bottom: 8px;
+         box-shadow: 0 3px 0 var(--ink), 3px 0 0 var(--ink), -3px 0 0 var(--ink), 0 -3px 0 var(--ink); }
+  .phone { width: 200px; height: 300px; background: #1a1020; border-radius: 22px; padding: 12px 9px; position: relative; box-shadow: 0 0 0 3px #3a2f45; }
+  .phone::before { content: ""; position: absolute; top: 5px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: #3a2f45; }
+  .scr { width: 100%; height: 100%; border-radius: 14px; background: #d9d4e4; position: relative; overflow: hidden;
+         display: flex; flex-direction: column; justify-content: center; padding: 10px; font-family: system-ui, "Kanit", sans-serif; }
+  .scr.top { justify-content: flex-start; }
+  .dlg { background: #fff; color: #1d1b20; border-radius: 14px; padding: 12px 12px 8px; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+  .dlg b { display: block; font-size: 13px; line-height: 1.3; margin-bottom: 6px; }
+  .dlg p { font-size: 10.5px; line-height: 1.35; margin: 0 0 8px; color: #49454f; }
+  .acts { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+  .act { font-size: 11px; font-weight: 600; color: #6750a4; padding: 5px 7px; border-radius: 12px; }
+  .act.dim { color: #79747e; }
+  .tap { position: relative; outline: 3px solid var(--pink); outline-offset: 1px; background: #ffe3f0; animation: pulse 1.4s ease-in-out infinite; }
+  .tap::after { content: "👆"; position: absolute; right: -6px; bottom: -20px; font-size: 20px; }
+  @keyframes pulse { 50% { outline-color: var(--orange); } }
+  @media (prefers-reduced-motion: reduce) { .tap { animation: none; } }
+  .notif { background: #fff; color: #1d1b20; border-radius: 12px; padding: 9px 10px; font-size: 11px; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,.18); margin-top: 6px; }
+  .notif small { display: block; color: #79747e; font-size: 9.5px; }
+  .notif .acts { margin-top: 4px; }
+  .setrow { background: #fff; color: #1d1b20; border-radius: 12px; padding: 10px; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; }
+  .tog { flex: none; width: 34px; height: 18px; border-radius: 9px; background: #6750a4; position: relative; }
+  .tog::before { content: ""; position: absolute; right: 3px; top: 3px; width: 12px; height: 12px; border-radius: 50%; background: #fff; }
+  .apphead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .appicon { width: 30px; height: 30px; border-radius: 8px; background: var(--orange); color: var(--ink); font-family: "Press Start 2P", monospace; font-size: 10px; display: grid; place-items: center; flex: none; }
+  .bigbtn { background: #6750a4; color: #fff; border-radius: 16px; padding: 8px; font-size: 12px; font-weight: 600; text-align: center; margin-top: 8px; }
+  .done { font-size: 34px; text-align: center; margin-bottom: 6px; }
+  .cap { font-size: 14px; margin: 14px 4px 0; max-width: 240px; }
+  .cap strong { color: #c2410c; }
+  .fix { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 10px 0; }
+  .fix div { background: #f3e8cc; padding: 10px 12px; }
+  .fix b { display: block; font-size: 15px; }
+  .fix span { font-size: 14px; }
 </style>
 </head>
 <body>
@@ -69,6 +106,107 @@
       <li data-th="กด ติดตั้ง ถ้า Play Protect เตือนว่าไม่รู้จักผู้พัฒนา ให้กด รายละเอียดเพิ่มเติม แล้ว ติดตั้งต่อไป (แอปเซ็นด้วยกุญแจของ Maker Hip)" data-en="Tap Install. If Play Protect warns about an unknown developer, tap More details, then Install anyway (the apps are signed with Maker Hip's key)."></li>
       <li data-th="รุ่นใหม่ติดตั้งทับรุ่นเก่าได้ งานที่บันทึกไว้ไม่หาย" data-en="A new version installs over the old one: your work stays."></li>
     </ol>
+    <p class="note"><a class="link" href="#pictures" data-th="Direct Install: ทำตามขั้นตอนเป็นภาพ ↓" data-en="Direct Install: follow the steps in pictures ↓"></a></p>
+  </section>
+
+  <section class="card" id="pictures">
+    <h2 data-th="DIRECT INSTALL · ทำตามขั้นตอน" data-en="DIRECT INSTALL · FOLLOW THE STEPS"></h2>
+    <p data-th="กดตรงที่มีกรอบสีชมพู ข้อความบนเครื่องคุณอาจต่างจากภาพเล็กน้อย ขึ้นกับยี่ห้อและรุ่น Android" data-en="Tap where the pink frame is. The words on your phone may differ a little, depending on the brand and the Android version."></p>
+    <div class="steps">
+
+      <div class="step">
+        <div class="num">1</div>
+        <div class="phone"><div class="scr">
+          <div class="dlg">
+            <b data-th="ไฟล์อาจเป็นอันตราย" data-en="File might be harmful"></b>
+            <p data-th="ต้องการเก็บ burgerstudio.apk ไว้หรือไม่" data-en="Do you want to keep burgerstudio.apk anyway?"></p>
+            <div class="acts"><span class="act dim" data-th="ยกเลิก" data-en="Cancel"></span><span class="act tap" data-th="ดาวน์โหลดต่อไป" data-en="Download anyway"></span></div>
+          </div>
+        </div></div>
+        <p class="cap"><span data-th="Chrome เตือนไฟล์ APK ทุกไฟล์ที่ไม่ได้มาจาก Play Store กด " data-en="Chrome warns about every APK that is not from the Play Store. Tap "></span><strong data-th="ดาวน์โหลดต่อไป" data-en="Download anyway"></strong></p>
+      </div>
+
+      <div class="step">
+        <div class="num">2</div>
+        <div class="phone"><div class="scr top">
+          <div class="notif">
+            <span data-th="burgerstudio.apk" data-en="burgerstudio.apk"></span>
+            <small data-th="ดาวน์โหลดเสร็จแล้ว" data-en="Download complete"></small>
+            <div class="acts"><span class="act tap" data-th="เปิด" data-en="Open"></span></div>
+          </div>
+        </div></div>
+        <p class="cap"><span data-th="โหลดเสร็จแล้วกด " data-en="When it is done, tap "></span><strong data-th="เปิด" data-en="Open"></strong><span data-th=" (หรือเปิดจากโฟลเดอร์ Downloads)" data-en=" (or open it from the Downloads folder)"></span></p>
+      </div>
+
+      <div class="step">
+        <div class="num">3</div>
+        <div class="phone"><div class="scr">
+          <div class="dlg">
+            <b data-th="เพื่อความปลอดภัย" data-en="For your security"></b>
+            <p data-th="ตอนนี้โทรศัพท์ยังไม่อนุญาตให้ติดตั้งแอปที่ไม่รู้จักจากแหล่งนี้" data-en="Your phone currently isn't allowed to install unknown apps from this source."></p>
+            <div class="acts"><span class="act dim" data-th="ยกเลิก" data-en="Cancel"></span><span class="act tap" data-th="การตั้งค่า" data-en="Settings"></span></div>
+          </div>
+        </div></div>
+        <p class="cap"><span data-th="ขึ้นแค่ครั้งแรก กด " data-en="Only the first time. Tap "></span><strong data-th="การตั้งค่า" data-en="Settings"></strong></p>
+      </div>
+
+      <div class="step">
+        <div class="num">4</div>
+        <div class="phone"><div class="scr top">
+          <div class="setrow tap"><span data-th="อนุญาตจากแหล่งที่มานี้" data-en="Allow from this source"></span><span class="tog"></span></div>
+        </div></div>
+        <p class="cap"><span data-th="เปิดสวิตช์ " data-en="Turn on "></span><strong data-th="อนุญาตจากแหล่งที่มานี้" data-en="Allow from this source"></strong><span data-th=" แล้วกดย้อนกลับ" data-en=", then go back"></span></p>
+      </div>
+
+      <div class="step">
+        <div class="num">5</div>
+        <div class="phone"><div class="scr">
+          <div class="dlg">
+            <div class="apphead"><span class="appicon">BS</span><b data-th="Burger Studio" data-en="Burger Studio"></b></div>
+            <p data-th="ต้องการติดตั้งแอปนี้หรือไม่" data-en="Do you want to install this app?"></p>
+            <div class="acts"><span class="act dim" data-th="ยกเลิก" data-en="Cancel"></span><span class="act tap" data-th="ติดตั้ง" data-en="Install"></span></div>
+          </div>
+        </div></div>
+        <p class="cap"><span data-th="กด " data-en="Tap "></span><strong data-th="ติดตั้ง" data-en="Install"></strong></p>
+      </div>
+
+      <div class="step">
+        <div class="num">6</div>
+        <div class="phone"><div class="scr">
+          <div class="dlg">
+            <b data-th="Play Protect: ไม่รู้จักแอปนี้" data-en="Play Protect: unknown app"></b>
+            <p data-th="Play Protect ไม่รู้จักผู้พัฒนาแอปนี้" data-en="Play Protect doesn't recognise this app's developer."></p>
+            <div class="acts"><span class="act tap" data-th="รายละเอียดเพิ่มเติม" data-en="More details"></span></div>
+            <div class="acts" style="margin-top:22px"><span class="act" style="outline:2px dashed var(--pink)" data-th="ติดตั้งต่อไป" data-en="Install anyway"></span></div>
+          </div>
+        </div></div>
+        <p class="cap"><span data-th="ถ้าขึ้นหน้านี้ กด " data-en="If you see this, tap "></span><strong data-th="รายละเอียดเพิ่มเติม" data-en="More details"></strong><span data-th=" แล้ว " data-en=", then "></span><strong data-th="ติดตั้งต่อไป" data-en="Install anyway"></strong><span data-th=" ถ้าถามให้ส่งแอปไปสแกน เลือกได้ทั้งสองทาง" data-en=". If it asks to send the app for a scan, either answer is fine."></span></p>
+      </div>
+
+      <div class="step">
+        <div class="num">7</div>
+        <div class="phone"><div class="scr">
+          <div class="dlg">
+            <div class="done">✅</div>
+            <b data-th="ติดตั้งแอปแล้ว" data-en="App installed"></b>
+            <div class="bigbtn tap" data-th="เปิด" data-en="Open"></div>
+          </div>
+        </div></div>
+        <p class="cap"><span data-th="เสร็จแล้ว กด " data-en="Done. Tap "></span><strong data-th="เปิด" data-en="Open"></strong><span data-th=" แล้วเริ่มทำเพลงได้เลย" data-en=" and start making music"></span></p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="card" id="help">
+    <h2 data-th="ติดปัญหา?" data-en="STUCK?"></h2>
+    <div class="fix">
+      <div><b data-th="กดดาวน์โหลดแล้วไม่มีอะไรเกิดขึ้น" data-en="Nothing happens when I tap download"></b><span data-th="คุณน่าจะเปิดลิงก์จากในแอป LINE, Facebook หรือ Messenger ซึ่งโหลดไฟล์ไม่ได้ กดเมนู ⋮ แล้วเลือก เปิดในเบราว์เซอร์ หรือคัดลอกลิงก์ไปเปิดใน Chrome" data-en="You probably opened the link inside LINE, Facebook or Messenger, which cannot download files. Tap the ⋮ menu and choose Open in browser, or copy the link into Chrome."></span></div>
+      <div><b data-th="หาไฟล์ที่โหลดไม่เจอ" data-en="I cannot find the downloaded file"></b><span data-th="เปิดแอป Files (ไฟล์ของฉัน) แล้วเข้าโฟลเดอร์ Downloads ไฟล์ชื่อขึ้นต้นด้วย burgerstudio" data-en="Open the Files app (My Files) and go to Downloads. The file name starts with burgerstudio."></span></div>
+      <div><b data-th="ขึ้นว่า &quot;แยกวิเคราะห์แพ็กเกจไม่ได้&quot;" data-en="It says &quot;There was a problem parsing the package&quot;"></b><span data-th="ไฟล์โหลดมาไม่ครบ ลบไฟล์นั้นแล้วโหลดใหม่ตอนเน็ตดี ต้องเป็น Android 6.0 ขึ้นไป" data-en="The download was cut. Delete the file and download it again on a good connection. Android 6.0 or newer is needed."></span></div>
+      <div><b data-th="ขึ้นว่า &quot;ไม่ได้ติดตั้งแอป&quot;" data-en="It says &quot;App not installed&quot;"></b><span data-th="มักเกิดเมื่อเครื่องมี Burger Studio รุ่นที่เซ็นด้วยกุญแจอื่นอยู่แล้ว ส่งออกงานที่อยากเก็บไว้ก่อน แล้วถอนการติดตั้งตัวเก่า จากนั้นติดตั้งใหม่ เครื่องที่พื้นที่เต็มก็ขึ้นข้อความนี้ได้ ลองลบไฟล์ที่ไม่ใช้" data-en="This usually means a Burger Studio signed with another key is already on the phone. Export the work you want to keep, uninstall the old one, then install again. A full phone can also show this: free some space."></span></div>
+      <div><b data-th="Play Protect บล็อกและไม่มีปุ่มติดตั้งต่อไป" data-en="Play Protect blocks it and there is no Install anyway"></b><span data-th="บางประเทศ รวมถึงไทย Android เริ่มบังคับให้แอปต้องมาจากผู้พัฒนาที่ยืนยันตัวตนกับ Google แล้ว Maker Hip กำลังยืนยันตัวตนอยู่ ระหว่างนี้บางเครื่องอาจยังติดตั้งไม่ได้ ติดตามข่าวในหน้านี้ได้เลย" data-en="In some countries, including Thailand, Android now requires apps from developers verified with Google. Maker Hip is completing this verification, so some phones may not install it yet. Watch this page for the update."></span></div>
+    </div>
   </section>
 
   <section class="card">
