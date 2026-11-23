@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Quixotic7/RemoteFM1FW/main/docs/RemoteFM1Metadata.schema.json",
+  "schema": 1,
+  "card": {
+    "tag": "Sampler workstation",
+    "what": "Burger Studio turns the FM-1 into a sampler workstation, built on Felucca: a SAMPLE row on HOME with its own sampling and sample FX, a guitar-pedal-style looper (tap to overdub, hold to undo the last layer) and ROCK LIVE, a real rock kit for slicing. It comes with free Android apps: Burger Studio makes beats with the same sounds and sends samples to the FM-1, and 16 Track mixes and records the parts.",
+    "category": "Groovebox",
+    "site": "https://perawoga2-coder.github.io/Fm1sampa/makerhip/",
+    "image": "docs/remotefm1-card.png"
+  },
+  "skin": {
+    "theme": { "body": "#1B1238", "key": "#2C2C37", "knob": "#FFF6E0", "led": "#FF7A2F", "bezel": "#0B0B0F" }
+  }
+}
