@@ -1,5 +1,5 @@
 {
   "_comment": "The app versions the Maker Hip site offers (the ones checked on a device). Change a version here to move the site's download button.",
-  "burger": { "version": "3.53", "url": "https://github.com/perawoga2-coder/fm1burger/releases/download/v3.53-lab/burgerstudio-lab-v3.53-debug.apk" },
+  "burger": { "version": "3.54", "url": "https://github.com/perawoga2-coder/fm1burger/releases/download/v3.54-lab/burgerstudio-lab-v3.54-debug.apk" },
   "track16": { "version": "0.6", "url": "https://github.com/perawoga2-coder/fm1bridge/releases/download/v0.6/16track-v0.6-debug.apk" }
 }
