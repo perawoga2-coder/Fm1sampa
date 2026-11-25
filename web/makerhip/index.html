@@ -137,6 +137,13 @@
         <div class="note"><a class="guide" href="guide/">SAMPLING GUIDE</a> · <span data-th="สำรองข้อมูลเครื่องก่อนติดตั้ง" data-en="Back up your FM-1 first"></span></div>
       </article>
       <article class="card">
+        <canvas id="i4" width="24" height="24" aria-hidden="true"></canvas>
+        <h2>STACK <span class="beta">BETA</span></h2>
+        <p data-th="เฟิร์มแวร์ของเราเองสำหรับ M-VAVE FM-1: 8 แทร็ก, เอฟเฟกต์แบบดีเจ, ลูปเปอร์, ENV, LFO, ARP และใช้คู่กับ Burger Studio ผ่าน USB หรือ Bluetooth" data-en="Our own firmware for the M-VAVE FM-1: eight tracks, DJ-style effects, a looper, ENV, LFO and ARP. Works with Burger Studio over USB or Bluetooth."></p>
+        <a href="https://perawoga2-coder.github.io/stack/" data-th="ติดตั้ง STACK" data-en="INSTALL STACK"></a>
+        <div class="note"><span>Beta 3.95</span> · <span data-th="ติดตั้งผ่าน Chrome ด้วยสาย USB-C" data-en="Installs from Chrome over USB-C"></span></div>
+      </article>
+      <article class="card">
         <canvas id="i2" width="24" height="24" aria-hidden="true"></canvas>
         <h2>SOUND BANK</h2>
         <p data-th="ชุดเสียงสำหรับ Burger Studio และ FM-1 ชุดใหม่ทุก 2 เดือน" data-en="Sound packs for Burger Studio and the FM-1, a new one every two months."></p>
@@ -264,7 +271,7 @@ function logo() {
 
 /* the pixel icons, bobbing: a burger, the FM-1, a sound bank (a record), 16 Track (a mixer) */
 function icons(t) {
-  for (let k = 0; k < 4; k++) {
+  for (let k = 0; k < 5; k++) {
     const c = $("i" + k).getContext("2d");
     setCtx(c);
     c.clearRect(0, 0, 24, 24);
@@ -284,6 +291,14 @@ function icons(t) {
         const x = 5 + j * 4, y = 7 + Math.round((Math.sin(t * 2.4 + j * 1.3) + 1) * 3.5);
         R(x + 1, 6 + b, 1, 13, "#5c5c69");
         R(x, y + b, 3, 2, ["#ff7a2f", "#4da3ff", "#34d399", "#ff5ca8"][j]);
+      }
+    } else if (k === 4) {
+      /* STACK: record crates stacked unevenly */
+      const off = [0, 2, -1, 1];
+      for (let j = 0; j < 4; j++) {
+        const y = 18 - j * 4 + b, x = 4 + off[j];
+        R(x, y - 1, 15, 1, ["#ff7a2f", "#4da3ff", "#34d399", "#ff5ca8"][j]);
+        R(x, y, 15, 3, "#c08a52"); R(x + 6, y + 1, 3, 1, "#3a2416");
       }
     } else {
       const a = t * 2;
