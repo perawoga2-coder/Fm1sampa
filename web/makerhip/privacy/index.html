@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy · Maker Hip</title>
+<meta name="description" content="Privacy policy of the Maker Hip apps: Burger Studio and 16 Track.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Kanit:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #1b1238; --ink: #1a1020; --paper: #fff6e0; --orange: #ff7a2f; --orange2: #ffb070; --sun: #ffd86b; --pink: #ff5ca8; --teal: #2dd4bf; --dim: #6b5f50; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #1b1238; } }
+  :root[data-theme="light"] { --bg: #1b1238; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--paper); }
+  body { font-family: "Kanit", system-ui, sans-serif; line-height: 1.5; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
+  .bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .pix { font-family: "Press Start 2P", monospace; font-size: 11px; color: var(--ink); background: var(--sun); border: 0; padding: 10px 12px; text-decoration: none; cursor: pointer;
+         box-shadow: 0 4px 0 var(--ink), 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 -4px 0 var(--ink); }
+  #lang { font-family: "Kanit", sans-serif; font-size: 14px; font-weight: 600; padding: 4px 10px; background: var(--paper); }
+  h1 { font-family: "Press Start 2P", monospace; font-size: 18px; line-height: 1.5; color: var(--sun); text-shadow: 2px 2px 0 var(--ink); margin: 8px 0 6px; }
+  .lead { font-size: 16px; margin: 0 0 22px; }
+  .card { background: var(--paper); color: var(--ink); padding: 18px 18px 14px; margin: 26px 0;
+          box-shadow: 0 6px 0 var(--ink), 6px 0 0 var(--ink), -6px 0 0 var(--ink), 0 -6px 0 var(--ink), 6px 6px 0 6px rgba(0,0,0,.35); }
+  .card h2 { font-family: "Press Start 2P", monospace; font-size: 13px; line-height: 1.6; margin: 0 0 10px; }
+  .card p, .card li { font-size: 15px; }
+  .card ol, .card ul { padding-left: 22px; margin: 8px 0; }
+  .card li { margin: 6px 0; }
+  .btns { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 4px 6px; }
+  .btn { font-family: "Press Start 2P", monospace; font-size: 11px; color: var(--ink); background: var(--orange); padding: 12px 12px; text-decoration: none;
+         box-shadow: 0 4px 0 var(--ink), 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 -4px 0 var(--ink); }
+  .btn:hover { background: var(--orange2); }
+  .btn.alt { background: var(--teal); }
+  :lang(th) .btn { font-family: "Kanit", sans-serif; font-size: 16px; font-weight: 600; padding: 8px 12px; }
+  .note { font-size: 13px; color: var(--dim); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 8px 0; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 2px solid #e8dcc0; }
+  th { font-weight: 600; }
+  .flow { font-family: "Press Start 2P", monospace; font-size: 10px; line-height: 2; background: #1a1020; color: var(--sun); padding: 10px 12px; overflow-x: auto; white-space: nowrap; }
+  footer { text-align: center; font-size: 12px; padding: 10px 16px 30px; }
+  a.link { color: #c2410c; font-weight: 600; }
+  .btn:focus-visible, .pix:focus-visible, a.link:focus-visible { outline: 3px solid var(--pink); outline-offset: 5px; }
+
+  /* install guide in pictures */
+  .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 22px 18px; margin: 14px 0 6px; }
+  .step { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .num { font-family: "Press Start 2P", monospace; font-size: 12px; background: var(--orange); color: var(--ink); padding: 6px 9px; margin-bottom: 8px;
+         box-shadow: 0 3px 0 var(--ink), 3px 0 0 var(--ink), -3px 0 0 var(--ink), 0 -3px 0 var(--ink); }
+  .phone { width: 200px; height: 300px; background: #1a1020; border-radius: 22px; padding: 12px 9px; position: relative; box-shadow: 0 0 0 3px #3a2f45; }
+  .phone::before { content: ""; position: absolute; top: 5px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: #3a2f45; }
+  .scr { width: 100%; height: 100%; border-radius: 14px; background: #d9d4e4; position: relative; overflow: hidden;
+         display: flex; flex-direction: column; justify-content: center; padding: 10px; font-family: system-ui, "Kanit", sans-serif; }
+  .scr.top { justify-content: flex-start; }
+  .dlg { background: #fff; color: #1d1b20; border-radius: 14px; padding: 12px 12px 8px; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+  .dlg b { display: block; font-size: 13px; line-height: 1.3; margin-bottom: 6px; }
+  .dlg p { font-size: 10.5px; line-height: 1.35; margin: 0 0 8px; color: #49454f; }
+  .acts { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+  .act { font-size: 11px; font-weight: 600; color: #6750a4; padding: 5px 7px; border-radius: 12px; }
+  .act.dim { color: #79747e; }
+  .tap { position: relative; outline: 3px solid var(--pink); outline-offset: 1px; background: #ffe3f0; animation: pulse 1.4s ease-in-out infinite; }
+  .tap::after { content: "👆"; position: absolute; right: -6px; bottom: -20px; font-size: 20px; }
+  @keyframes pulse { 50% { outline-color: var(--orange); } }
+  @media (prefers-reduced-motion: reduce) { .tap { animation: none; } }
+  .notif { background: #fff; color: #1d1b20; border-radius: 12px; padding: 9px 10px; font-size: 11px; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,.18); margin-top: 6px; }
+  .notif small { display: block; color: #79747e; font-size: 9.5px; }
+  .notif .acts { margin-top: 4px; }
+  .setrow { background: #fff; color: #1d1b20; border-radius: 12px; padding: 10px; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; }
+  .tog { flex: none; width: 34px; height: 18px; border-radius: 9px; background: #6750a4; position: relative; }
+  .tog::before { content: ""; position: absolute; right: 3px; top: 3px; width: 12px; height: 12px; border-radius: 50%; background: #fff; }
+  .apphead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .appicon { width: 30px; height: 30px; border-radius: 8px; background: var(--orange); color: var(--ink); font-family: "Press Start 2P", monospace; font-size: 10px; display: grid; place-items: center; flex: none; }
+  .bigbtn { background: #6750a4; color: #fff; border-radius: 16px; padding: 8px; font-size: 12px; font-weight: 600; text-align: center; margin-top: 8px; }
+  .done { font-size: 34px; text-align: center; margin-bottom: 6px; }
+  .cap { font-size: 14px; margin: 14px 4px 0; max-width: 240px; }
+  .cap strong { color: #c2410c; }
+  .fix { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 10px 0; }
+  .fix div { background: #f3e8cc; padding: 10px 12px; }
+  .fix b { display: block; font-size: 15px; }
+  .fix span { font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar"><a class="pix" href="../">&larr; MAKER HIP</a></div>
+  <h1>PRIVACY POLICY</h1>
+  <p class="lead">Burger Studio and 16 Track, Maker Hip's music apps for Android. Last updated: 28 November 2026.</p>
+
+  <div class="card">
+    <h2>IN SHORT</h2>
+    <p>The apps collect no personal data and send nothing to Maker Hip or anyone else. They have no account, no ads,
+    no analytics and no tracking, and they do not use the internet at all (they do not ask for the internet
+    permission). Everything you make stays on your device until you choose to share it.</p>
+  </div>
+
+  <div class="card">
+    <h2>WHAT THE APPS USE, AND WHY</h2>
+    <table>
+      <tr><th>Permission</th><th>What it is for</th></tr>
+      <tr><td>Microphone</td><td>To record your voice or an instrument into a track or a sample, only when you press record. The sound is kept on your device.</td></tr>
+      <tr><td>Nearby devices (Bluetooth)</td><td>To connect a Bluetooth MIDI instrument, such as the M-VAVE FM-1, for notes and tempo. It is not used to find your location.</td></tr>
+      <tr><td>Location (Android 11 and older only)</td><td>Older Android versions ask for it before any Bluetooth scan. The apps never read your location.</td></tr>
+      <tr><td>USB</td><td>To talk to a MIDI instrument or an audio interface on the cable (samples, songs and tempo to and from the FM-1).</td></tr>
+      <tr><td>Motion sensor (Burger Studio)</td><td>For the full-screen keyboard's tilt and shake effects. The readings are used on the spot and kept nowhere.</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>YOUR FILES</h2>
+    <ul>
+      <li>Your sounds, patterns, songs, mixes and settings are kept in the app's own storage on your device.</li>
+      <li>A file leaves the app only when you choose: an export, a backup, a share, or a sample you send to your own instrument. You pick where it goes.</li>
+      <li>Burger Studio can hand a mix to 16 Track on the same device (the "&rarr; MIX" INBOX). Only Maker Hip's own apps can read it.</li>
+      <li>Uninstalling an app deletes its storage. Keep a backup (Setup &gt; Backup in Burger Studio, the menu in 16 Track) if you want your work later.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>CHILDREN</h2>
+    <p>The apps are not made for children under 13 in particular and collect no data from anyone.</p>
+  </div>
+
+  <div class="card">
+    <h2>CHANGES AND CONTACT</h2>
+    <p>If this policy changes, the new version is published on this page with its date. Questions: write to the
+    developer email shown on the app's Google Play page.</p>
+  </div>
+</div>
+</body>
+</html>
